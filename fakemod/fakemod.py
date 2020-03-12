@@ -40,8 +40,6 @@ import sys
 import types
 import importlib
 
-__version__ = '0.1.0'
-
 __all__ = ['at', 'auto', 'local', 'FakeMod']
 
 
