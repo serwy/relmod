@@ -29,7 +29,7 @@ Place into `__init__.py`:
 
     import fakemod; fakemod.local(vars())
 
-Also place into `local.py` to allow 
+Also place into `local.py` to allow
 for `from . import local` to access other files
 in the same directory.
 
@@ -49,7 +49,7 @@ _real_cache = {}
 
 
 class _FileMod:
-    def __init__(self, fullpath):
+    def __init__(self, fullpath, fm):
         self.fullpath = fullpath
 
         pkg = 'fake:' + self.fullpath
@@ -57,7 +57,7 @@ class _FileMod:
         mod.__file__ = fullpath
         mod.__spec__ = None
         mod.__package__ = pkg
-        mod.__dict__['__fakemod__'] = True
+        mod.__dict__['__fakemod__'] = fm
 
         self.mod =mod
         self.load()
@@ -89,11 +89,11 @@ def _fake_get(self, name):
     if os.path.isfile(full + '.py'):
         full = full + '.py'
         if full not in _cache:
-            _cache[full] = _FileMod(full)
+            _cache[full] = _FileMod(full, self)
         return _cache[full].get()
     elif os.path.isdir(full):
         if full not in _cache:
-            _cache[full] = FakeMod(full)
+            _cache[full] = FakeMod(full, self)
         return _cache[full]
     else:
         raise AttributeError(
@@ -142,7 +142,7 @@ class FakeMod:
 class _AutoReload:
 
     def __init__(self, g, head=None, name=None):
-        if '__fakemod__autoreload__' in g:
+        if '__fakemod__' in g:
             return
 
         self.g = g
@@ -154,7 +154,7 @@ class _AutoReload:
             if f:
                 head, tail = os.path.split(f)
             else:
-                head = g['__path__'][0]
+                head = next(iter(g['__path__']))
 
         if name is None:
             name = self.g['__name__']
@@ -164,7 +164,7 @@ class _AutoReload:
 
         g['__getattr__'] = self.get
         g['__dir__'] = self.dir
-        g['__fakemod_autoreload__'] = self
+        g['__fakemod__'] = self
 
     def get(self, name):
         if self.g.get('__fakemod_static__'):
@@ -173,20 +173,21 @@ class _AutoReload:
             m = importlib.import_module("." + name, _name)
             self._loaded[name] = m
             return m
-             
         _name = self._name
         m = self._loaded.get(name)
         if m is None:
             m = importlib.import_module("." + name, _name)
             self._loaded[name] = m
-
             # make sure __getattr__ is called by
             # removing name from the namespace
             self.g.pop(name, None)
-            if m.__file__:
-                self._last[m.__file__] = os.stat(m.__file__)
+
+            if (_name+'.'+name) not in sys.modules:
+                if m.__file__:
+                    self._last[m.__file__] = os.stat(m.__file__)
 
         file = m.__file__
+
         if file:
             last = self._last.get(file)
             s = os.stat(file)
@@ -197,16 +198,24 @@ class _AutoReload:
             # the timestamp is not updated
             self._last[file] = s
         else:
-            if '__fakemod_autoreload__' not in m.__dict__:
+            if '__fakemod__' not in m.__dict__:
                 _AutoReload(m.__dict__)
 
         return m
 
     def dir(self):
-        return _pkg_dir(self._head)
+        s1 = set(self.g.keys())
+        s2 = set(_pkg_dir(self._head))
+
+        s1.update(s2)
+        return sorted(s1)
 
 
-def local(g):
+# Using Python 3.7+ module machinery
+
+def local(vars):
+    "For accessing a module's peers in the same directory"
+    g = vars
     name = g['__name__']
     if name.endswith('.local'):
         name = name[:-6]
@@ -219,14 +228,24 @@ def local(g):
 
     _AutoReload(g, head, name)
 
+    return g['__fakemod__']
+
 
 def auto(mod):
-    local(mod.__dict__)
+    "Given a module, return auto-reloading parent"
+    a = local(mod.__dict__)
+    check = _pkg_dir(a._head)
+    g = a.g
+    for i in check:
+        g.pop(i, None)
 
 
 def at(path):
+    "Given a file path, install autoreload into parent and return module"
     path = os.path.abspath(path)
-    assert(os.path.isdir(path))
+    if os.path.isfile(path):
+        path, tail = os.path.split(path)
+
     if path not in _real_cache:
         head, tail = os.path.split(path)
         sys.path.insert(0, head)
@@ -236,3 +255,4 @@ def at(path):
         _real_cache[path] = m
 
     return _real_cache[path]
+
