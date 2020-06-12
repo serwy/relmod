@@ -53,6 +53,9 @@ def __fakemod_post(obj):
         globals().update(obj)
 
 
+_blank_stat = os.stat_result([0] * len(os.stat(__file__)))
+
+
 class FakeModule(types.ModuleType):
     def __repr__(self):
         return '<fakemodule %r at %r>' % (
@@ -62,6 +65,13 @@ class FileStat:
     def __init__(self):
         self.stats = {}  # fullpath : stat
         self._check = True
+
+    def _blank(self, fullpath):
+        self.stats[fullpath] = _blank_stat
+
+    def _forget(self, fullpath):
+        if fullpath in self.stats:
+            return self.stats.pop(fullpath)
 
     def is_same(self, fullpath, first=None, update=False,
                 _check=None):
@@ -102,7 +112,7 @@ class FileStat:
                                 _check=True):
                 r.append(fullpath)
         return r
-                
+
 
 _fs = FileStat()
 
@@ -138,14 +148,14 @@ class FakeModules:
                 mod = FakeModule(':fakemod:' + fullpath)
 
             d = mod.__dict__
-            
+
             pre = None
             if '__fakemod_pre' in d:
                 try:
                     pre = d['__fakemod_pre']()
                 except BaseException:
                     traceback.print_exc()
-                
+
             d['__fakemod__'] = self
             d['__name__'] = ':fakemod:' + fullpath
             d['__file__'] = fullpath
@@ -156,7 +166,7 @@ class FakeModules:
                     d['__fakemod_post'](pre)
                 except BaseException:
                     traceback.print_exc()
-            
+
             self.mods[fullpath] = mod
             _fs.stats[fullpath] = stat
             return mod
@@ -174,7 +184,7 @@ class FakeModules:
     def changed(self):
         return _fs.not_same(self.mods.keys())
 
-    
+
 _fm = FakeModules()
 
 
@@ -183,7 +193,7 @@ class SysModules:
         self.mods = {}
         self._fsmod = FileStat()
         self._first_load(update=True)
-        
+
     def _first_load(self, update=False):
         nup = []
         for k,v in sys.modules.items():
@@ -204,7 +214,7 @@ class SysModules:
         self._fsmod.is_same(mod.__file__, first=False,
                             update=True)
         self.mods[mod.__file__] = mod
-    
+
     def get_module(self, fullpath):
         if not self._fsmod.is_same(fullpath, first=True,
                                    update=False):
@@ -214,7 +224,7 @@ class SysModules:
     def reload(self):
         nup = self._first_load()
         nup.sort(reverse=True)
-        
+
         r = []  # list of module names reloaded
         for n in nup:
             if n == '__main__':
@@ -315,7 +325,7 @@ def _dir(root):
 
 
 class FakeNamespace:
-    
+
     @property
     def __init__(self):
         d = self.__dict__
@@ -350,15 +360,15 @@ def _qgetattr(mod, name):
         if prior is not new_mod:
             print('Loading %r overwrites a %r in %r' % (
                 name, type(prior), mod))
-            
+
     return new_mod
-    
+
 def _qdir(root):
     x = scan_attr(root)
     return sorted(x.keys())
 
 class QuasiNamespace:
-    
+
     def __init__(self, mod, root=None):
         d = self.__dict__
         d[':mod:'] = mod
@@ -367,7 +377,7 @@ class QuasiNamespace:
             head, tail = os.path.split(mod.__file__)
             root = head
         d[':root:'] = root
-        
+
     def __dir__(self):
         return _qdir(self.__dict__[':root:'])
 
