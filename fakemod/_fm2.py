@@ -43,7 +43,7 @@ import traceback
 from pprint import pprint
 
 
-__all__ = ['at', 'local', 'ModuleProxy', 'importfs']
+__all__ = ['at', 'local', 'ModuleProxy', 'import_at']
 
 def __fakemod_pre():
     return {'_fs':_fs, '_fm':_fm, '_sm':_sm}
@@ -335,6 +335,9 @@ class FakeNamespace:
             # run the __init__.py for the module
             return _getattr(d[':root:'], '__init__')
 
+    def __getitem__(self, key):
+        return self.__dict__[key]
+
     def __dir__(self):
         return _dir(self.__dict__[':root:'])
 
@@ -363,11 +366,9 @@ def _qgetattr(mod, name):
 
     return new_mod
 
-def _qdir(root):
-    x = scan_attr(root)
-    return sorted(x.keys())
 
 class QuasiNamespace:
+    # Use the import machinery for reloading modules
 
     def __init__(self, mod, root=None):
         d = self.__dict__
@@ -379,11 +380,16 @@ class QuasiNamespace:
         d[':root:'] = root
 
     def __dir__(self):
-        return _qdir(self.__dict__[':root:'])
+        return _dir(self.__dict__[':root:'])
+
+    def __getitem__(self, key):
+        return self.__dict__[key]
 
     def __getattr__(self, name):
         mod = self.__dict__[':mod:']
         res = _qgetattr(mod, name)
+
+
         if isinstance(res, types.ModuleType):
             if res.__file__ is None:
                 root = self.__dict__[':root:']
@@ -490,11 +496,23 @@ def local(vars, name='local'):
 # Note: namespace modules in python 3.3+
 # what to do before 3.3 ?
 
-def importfs(path):
+def import_at(path):
     path = os.path.abspath(path)
     head, tail = os.path.split(path)
     sys.path.append(head)
     try:
+        # TODO: check modules for collision
+        if tail in sys.modules:
+            m = sys.modules[tail]
+            if m.__file__:
+                if os.path.abspath(mod.__file__) != os.path.abspath(path):
+                    # collision
+                    raise Warning('module collision: %r' % m.__file__)
+            else:
+                # namespace mod?
+                # TODO: check for path collision
+                pass
+            pass
         mod = importlib.import_module(tail)
         if mod.__file__:
             _sm.register(mod)

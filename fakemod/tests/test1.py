@@ -1,10 +1,12 @@
+# Unit test
+
+# $ python -m unittest -v fakemod.tests.test1
+
 import unittest
+import types
 import os
 
 import fakemod
-
-
-import types
 
 
 class TestFileStat(unittest.TestCase):
@@ -24,7 +26,7 @@ class TestFileStat(unittest.TestCase):
         self.assertTrue(s is None)
 
         _fs._blank(__file__)
-       
+
         s = _fs.is_same(__file__, first=None, update=True)
         self.assertFalse(s)
 
@@ -47,7 +49,7 @@ class TestNamespace(unittest.TestCase):
         t = type(self.mod_ns)
         s = self.mod_ns.sub_ns
         self.assertTrue(isinstance(s, t))
-        
+
     def test_nested_ns_func(self):
         self.assertTrue(hasattr(self.mod_ns.sub_ns, 'func'))
         self.assertFalse(hasattr(self.mod_ns.sub_ns, 'missing'))
@@ -62,4 +64,4 @@ class TestNamespace(unittest.TestCase):
 
         _fs._blank(self.mod_ns.func.__file__)
         self.assertTrue(isinstance(self.mod_ns.func.x, types.FunctionType))
-        
+
