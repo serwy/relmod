@@ -43,7 +43,7 @@ import traceback
 from pprint import pprint
 
 
-__all__ = ['at', 'local', 'ModuleProxy', 'import_at']
+__all__ = ['at', 'local', 'ModuleProxy', 'import_at', 'wrap']
 
 def __fakemod_pre():
     return {'_fs':_fs, '_fm':_fm, '_sm':_sm}
@@ -184,6 +184,10 @@ class FakeModules:
     def changed(self):
         return _fs.not_same(self.mods.keys())
 
+    def _reload_all(self):
+        for fp in self.mods:
+            self.load_file(fp)
+
 
 _fm = FakeModules()
 
@@ -220,6 +224,17 @@ class SysModules:
                                    update=False):
             importlib.reload(self.mods[fullpath])
         return self.mods[fullpath]
+
+    def _check(self, mod, reload=True):
+        fullpath = mod.__file__
+        if fullpath not in self.mods:
+            self._fsmod.is_same(fullpath, first=True,
+                                update=True)
+            self.mods[fullpath] = mod
+        elif reload:
+            if not self._fsmod.is_same(fullpath, first=False,
+                                   update=True):
+                importlib.reload(mod)
 
     def reload(self):
         nup = self._first_load()
@@ -355,10 +370,13 @@ class FakeNamespace:
 class missing:
     pass
 
-def _qgetattr(mod, name):
+def _qgetattr(self, name):
+    mod = self.__dict__[':mod:']
+    rel = self.__dict__[':autoreload:']
     new_name = mod.__name__ + '.' + name
     prior = getattr(mod, name, missing)
     new_mod = importlib.import_module(new_name, mod)
+    _sm._check(new_mod, reload=rel)
     if prior is not missing:
         if prior is not new_mod:
             print('Loading %r overwrites a %r in %r' % (
@@ -373,6 +391,7 @@ class QuasiNamespace:
     def __init__(self, mod, root=None):
         d = self.__dict__
         d[':mod:'] = mod
+        d[':autoreload:'] = True
         if root is None:
             # namespace modules have __file__ = None
             head, tail = os.path.split(mod.__file__)
@@ -385,10 +404,11 @@ class QuasiNamespace:
     def __getitem__(self, key):
         return self.__dict__[key]
 
-    def __getattr__(self, name):
-        mod = self.__dict__[':mod:']
-        res = _qgetattr(mod, name)
+    def __setitem__(self, key, value):
+        self.__dict__[key] = value
 
+    def __getattr__(self, name):
+        res = _qgetattr(self, name)
 
         if isinstance(res, types.ModuleType):
             if res.__file__ is None:
@@ -423,14 +443,24 @@ class ModuleProxy:
         if hasattr(fullpath, '__file__'):
             if isinstance(fullpath, FakeModule):
                 fullpath = fullpath.__file__
+            elif isinstance(fullpath, ModuleProxy):
+                # copy constructor
+                dd = fullpath.__dict__
+                d[':name:'] = dd[':name:']
+                d[':handler:'] = _sm
+                fullpath = dd[':fullpath:']
             else:
-                #print('module proxy for module', fullpath)
                 d[':name:'] = fullpath.__name__
                 d[':handler:'] = _sm
                 _sm.register(fullpath)
                 fullpath = fullpath.__file__
 
         d[':fullpath:'] = fullpath
+
+    @property
+    def __doc__(self):
+        m = _mp_get(self)
+        return getattr(m, '__doc__')
 
     def __getattr__(self, name):
         m = _mp_get(self)
@@ -453,6 +483,10 @@ class ModuleProxy:
         fp = d[':fullpath:']
         name = d[':name:']
         return "<moduleproxy %r for %r>" % (name, fp)
+
+
+def wrap(obj):
+    return ModuleProxy(obj)
 
 
 def at(where):
@@ -498,21 +532,23 @@ def local(vars, name='local'):
 
 def import_at(path):
     path = os.path.abspath(path)
-    head, tail = os.path.split(path)
+    path2, ext = os.path.splitext(path)
+    head, tail = os.path.split(path2)
+    # head, tail, ext
     sys.path.append(head)
     try:
         # TODO: check modules for collision
         if tail in sys.modules:
             m = sys.modules[tail]
             if m.__file__:
-                if os.path.abspath(mod.__file__) != os.path.abspath(path):
+                if os.path.abspath(m.__file__) != path:
                     # collision
                     raise Warning('module collision: %r' % m.__file__)
             else:
                 # namespace mod?
                 # TODO: check for path collision
                 pass
-            pass
+
         mod = importlib.import_module(tail)
         if mod.__file__:
             _sm.register(mod)
@@ -528,4 +564,3 @@ def import_at(path):
             return ModuleProxy(path)
     finally:
         sys.path.pop()
-
