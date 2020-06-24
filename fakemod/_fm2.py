@@ -188,6 +188,25 @@ class FakeModules:
         for fp in self.mods:
             self.load_file(fp)
 
+    def _reset(self, mod):
+        # clear module dict and reload
+        filename = mod.__file__
+        fhead, ftail = os.path.split(filename)
+
+        self.mods[filename].__dict__.clear()
+        self.load_file(filename)
+
+    def _reload_related(self, mod):
+        # reload modules with same parent dir as mod
+        filename = mod.__file__
+        fhead, ftail = os.path.split(filename)
+        for name in self.mods:
+            head, tail = os.path.split(name)
+            if head == fhead:
+                print('reloading:', name)
+                self.load_file(name)
+
+
 
 _fm = FakeModules()
 
@@ -344,6 +363,7 @@ class FakeNamespace:
     @property
     def __init__(self):
         d = self.__dict__
+        d[':proxy:'] = True
         if ':root:' not in d:
             return _fns_init(self)
         else:
@@ -357,7 +377,14 @@ class FakeNamespace:
         return _dir(self.__dict__[':root:'])
 
     def __getattr__(self, name):
-        return _getattr(self.__dict__[':root:'], name)
+        r = _getattr(self.__dict__[':root:'], name)
+        if self.__dict__[':proxy:']:
+            if isinstance(r, types.ModuleType):
+                if r.__file__:
+                    r = ModuleProxy(r)
+                else:
+                    pass  # what to do here?
+        return r
 
     def __setattr__(self, name, value):
         raise ValueError('read-only')
@@ -373,9 +400,19 @@ class missing:
 def _qgetattr(self, name):
     mod = self.__dict__[':mod:']
     rel = self.__dict__[':autoreload:']
-    new_name = mod.__name__ + '.' + name
+
+    parts = mod.__name__.split('.')
+    # when nested, need to break off names
+    # TODO: test case
+    if len(parts) == 1:
+        _name = parts[0]
+    else:
+        _name  = '.'.join(parts[:-1])
+
+    new_name = _name + '.' + name
     prior = getattr(mod, name, missing)
-    new_mod = importlib.import_module(new_name, mod)
+    new_mod = importlib.import_module(new_name, mod
+                                      )
     _sm._check(new_mod, reload=rel)
     if prior is not missing:
         if prior is not new_mod:
@@ -415,6 +452,9 @@ class QuasiNamespace:
                 root = self.__dict__[':root:']
                 nr = os.path.join(root, name)
                 res = QuasiNamespace(res, root=nr)
+            else:
+                # proxy ?
+                pass
         return res
 
     def __setattr__(self, name, value):
@@ -447,7 +487,7 @@ class ModuleProxy:
                 # copy constructor
                 dd = fullpath.__dict__
                 d[':name:'] = dd[':name:']
-                d[':handler:'] = _sm
+                d[':handler:'] = dd[':handler:']
                 fullpath = dd[':fullpath:']
             else:
                 d[':name:'] = fullpath.__name__
@@ -491,7 +531,7 @@ def wrap(obj):
 
 def at(where):
     if isinstance(where, dict):
-        # vars() passed in
+        # globals() passed in
         if '__fakemod__' in where or __name__ == '__main__':
             f = where['__file__']
             f = os.path.abspath(f)
@@ -502,16 +542,58 @@ def at(where):
             return QuasiNamespace(head)
 
     elif os.path.isdir(where):
+        where = os.path.abspath(where)
         return FakeNamespace(where)
     elif os.path.isfile(where):
+        where = os.path.abspath(where)
         return ModuleProxy(where)
     else:
-        raise Exception('Eh: %r' % where)
+        raise ValueError('Not found: %r' % where)
 
+
+class FakeImport:
+    """dirty hack with python syntax.
+The getattr can be space-separated.
+
+`fimport .util` is  `getattr(fimport, 'util')`
+
+It is conveniently close to `import .util`
+for one-level relative imports when fakemod
+is no longer needed.
+
+If `local` was created for importlib, then fimport
+functions the same as a relative import
+"""
+
+    def __init__(self, vars, local):
+        self.__vars = vars
+        self.__local = local
+
+    def __getattr__(self, name):
+        try:
+            error = False
+            item = getattr(self.__local, name)
+        except AttributeError:
+            error = True
+
+        if error:
+            n = self.__vars['__name__'] + '.' + name
+            raise ModuleNotFoundError(n)
+
+        # inject into namespace, just like import
+        self.__vars[name] = item
+        return item
+
+# TODO: reference tracking to modules to
+# form a dependency graph, maybe use gc to augment
+
+# TODO: import hook for tracking
+# importlib machinery will not auto-reload
 
 def local(vars, name='local'):
     assert(isinstance(vars, dict))
     # vars() passed in
+    where = vars
     if '__fakemod__' in where or __name__ == '__main__':
         f = where['__file__']
         f = os.path.abspath(f)
@@ -523,6 +605,7 @@ def local(vars, name='local'):
 
     if name:
         vars[name] = mod
+        vars['fimport'] = FakeImport(vars, mod)
 
     return mod
 
@@ -534,10 +617,12 @@ def import_at(path):
     path = os.path.abspath(path)
     path2, ext = os.path.splitext(path)
     head, tail = os.path.split(path2)
+    if tail == '__init__':
+        head, tail = os.path.split(head)
+
     # head, tail, ext
     sys.path.append(head)
     try:
-        # TODO: check modules for collision
         if tail in sys.modules:
             m = sys.modules[tail]
             if m.__file__:
@@ -561,6 +646,7 @@ def import_at(path):
             return FakeNamespace(path)
         else:
             print('well')
+            raise
             return ModuleProxy(path)
     finally:
         sys.path.pop()
