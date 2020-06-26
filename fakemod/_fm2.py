@@ -120,8 +120,9 @@ class FakeModules:
     # fake module registry
     def __init__(self):
         self.mods = {}   # fullpath: fakemodule
+        self._active = set()
 
-    def load_file(self, fullpath):
+    def __load_file(self, fullpath):
         # this will always load/exec the file
         assert(os.path.isfile(fullpath))
 
@@ -173,6 +174,15 @@ class FakeModules:
 
         else:
             return None
+
+    def load_file(self, fullpath):
+        if fullpath in self._active:
+             raise ImportError('circular %s' % repr(self._active))
+        try:
+            self._active.add(fullpath)
+            return self.__load_file(fullpath)
+        finally:
+            self._active.remove(fullpath)
 
     def get_module(self, fullpath):
         # grabs a module based on fullpath, reloading if needed
