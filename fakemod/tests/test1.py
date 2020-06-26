@@ -65,3 +65,23 @@ class TestNamespace(unittest.TestCase):
         _fs._blank(self.mod_ns.func.__file__)
         self.assertTrue(isinstance(self.mod_ns.func.x, types.FunctionType))
 
+
+class TestCircular(unittest.TestCase):
+    def setUp(self):
+        head, tail = os.path.split(__file__)
+        _mod_circ = os.path.join(head, 'mod_circ')
+        self.mod_circ = fakemod.at(_mod_circ)
+
+    def test_circ(self):
+        with self.assertRaises(ImportError):
+            self.mod_circ.a
+
+
+    def test_circ2(self):
+        with self.assertRaises(ImportError):
+            self.mod_circ.self
+
+
+if __name__ == '__main__':
+    unittest.main()
+
