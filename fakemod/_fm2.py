@@ -553,10 +553,10 @@ def wrap(obj):
     return ModuleProxy(obj)
 
 
-def at(where):
+def at(where, allow_real=False):
     if isinstance(where, dict):
         # globals() passed in
-        if '__fakemod__' in where or __name__ == '__main__':
+        if '__fakemod__' in where or __name__ == '__main__' or not allow_real:
             f = where['__file__']
             f = os.path.abspath(f)
             head, tail = os.path.split(f)
@@ -614,11 +614,11 @@ functions the same as a relative import
 # TODO: import hook for tracking
 # importlib machinery will not auto-reload
 
-def local(vars, name='local'):
+def local(vars, name='local', allow_real=False):
     assert(isinstance(vars, dict))
     # vars() passed in
     where = vars
-    if '__fakemod__' in where or __name__ == '__main__':
+    if '__fakemod__' in where or __name__ == '__main__' or not allow_real:
         f = where['__file__']
         f = os.path.abspath(f)
         head, tail = os.path.split(f)
