@@ -404,6 +404,20 @@ class FakeNamespace:
             self.__dict__[':root:'])
 
 
+    def __call__(self, num):
+        # go up a directory, -num times
+        assert(isinstance(num, int))
+        if num == 0:
+            return self
+
+        r = self.__dict__[':root:']
+        r = os.path.abspath(r)
+        head = r
+        for _ in range(-num):
+            head, tail = os.path.split(head)
+
+        return FakeNamespace(head)
+
 class missing:
     pass
 
