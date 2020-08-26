@@ -119,6 +119,28 @@ class TestFunc(unittest.TestCase):
         finally:
             sys.modules.pop('fm_main_x')
 
+    def test_deep_fimport(self):
+        files = {'main/sub/sub/a.py': '''if 1:
+    import fakemod; local = fakemod.install(globals())
+    fimport('../x.py')
+    fimport('../../y.py')
+    ''',
+                 'main/sub/sub/b.py': '''if 1:
+    import fakemod; local = fakemod.install(globals())
+    fimport('..x')
+    fimport('...y')
+    ''',
+                 'main/sub/x.py': 'X=1',
+                 'main/y.py': 'Y=2',
+                 }
+        self.kf.update(files)
+        lib = self.lib
+
+        self.assertEqual(lib.main.sub.sub.a.x.X, 1)
+        self.assertEqual(lib.main.sub.sub.a.y.Y, 2)
+
+        self.assertEqual(lib.main.sub.sub.b.x.X, 1)
+        self.assertEqual(lib.main.sub.sub.b.y.Y, 2)
 
 def run():
     unittest.main(__name__, verbosity=2)

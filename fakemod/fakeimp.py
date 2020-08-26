@@ -28,8 +28,9 @@ class FakeImport:
                 path = path.replace('\\', '/')
             if path.endswith('.py'):
                 path = path[:-3]
-            path = path.replace('../', '..')
+            path = path.replace('../', '.')
             path = path.replace('/', '.')
+            path = '.' + path
             # path has been converted from filesystem to python name
 
         # convert to import
