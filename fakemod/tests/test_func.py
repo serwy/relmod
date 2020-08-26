@@ -80,6 +80,45 @@ class TestFunc(unittest.TestCase):
         self.assertEqual(mod.Y, 5)
         self.assertEqual(mod.Z, 6)
 
+    def test_init_api(self):
+        files = {'main/__init__.py': '',
+                  'main/x.py':'X=1; Y=2; Z=3 ',
+                  'main/y.py':'X=4; Y=5; Z=6 ',
+                  'main/a.py':'''if 1:
+                    import fakemod
+                    local=fakemod.install(globals())
+                    ''',
+                  }
+        self.kf.update(files)
+
+        p = self.kf.path('main/x.py')
+        x = fakemod.at(p)
+        self.assertEqual(x.X, 1)
+
+        lib = fakemod.up(p)
+        self.assertEqual(lib.x.X, 1)
+        self.assertEqual(lib.y.X, 4)
+
+        lib.y.X = 10
+        self.assertEqual(lib.y.X, 10)
+        fakemod.reload(lib.y.__file__)
+        self.assertEqual(lib.y.X, 4)
+
+        g = {'__name__':'__main__',
+             '__file__':self.kf.path('main/__init__.py')}
+
+        local = fakemod.install(g)
+        self.assertTrue('fimport' in g)
+        self.assertTrue('ffrom' in g)
+
+
+        fakemod.toplevel('fm_main_x', lib.x.__file__)
+        try:
+            import fm_main_x
+            self.assertEqual(fm_main_x.X, 1)
+        finally:
+            sys.modules.pop('fm_main_x')
+
 
 def run():
     unittest.main(__name__, verbosity=2)

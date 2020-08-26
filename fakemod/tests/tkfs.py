@@ -36,3 +36,7 @@ class TinyKeyFS:
     def update(self, d):
         for k, v in d.items():
             self[k] = v
+
+    def path(self, key):
+        p = os.path.join(self.base, key)
+        return p

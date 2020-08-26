@@ -28,7 +28,7 @@ def install(globalsdict):
     return mod
 
 def reload(filename):
-    return default.reload(filename)
+    return _default.reload(filename)
 
 def toplevel(toplevel, filename):
     if isinstance(filename, fmods.FakeModuleType):
