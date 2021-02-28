@@ -93,7 +93,7 @@ class FakeModuleRegistry:
         ap = os.path.abspath(filename)
         f = filename
         if f != ap:
-            print('WARNING: edge case for ' repr((f, ap)))
+            print('WARNING: edge case for ', repr((f, ap)))
             filename = os.path.sep + filename
             #assert(f == ap)
         mod = fmods.FakeModuleType('fake')
