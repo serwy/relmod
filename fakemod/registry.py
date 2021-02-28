@@ -191,7 +191,6 @@ class FakeModuleRegistry:
 
         return mod
 
-
     def _import(self, name, gb, lc, fromlist, level=0):
         if '__fakeregistry__' not in gb:
             return self._orig_import(name, gb, lc, fromlist, level)
@@ -216,6 +215,14 @@ class FakeModuleRegistry:
                 self._add_dep(fullpath, inside)
 
         if fromlist:
+            # add dependencies
+
+            if '*' in fromlist:
+                _all = getattr(mod, '__all__', None)
+                if _all is None:
+                    _all = [i for i in dir(mod) if i[0] != '_']
+                fromlist = _all
+
             for f in fromlist:
                 m = getattr(mod, f)
                 if isinstance(m, fmods.FakeModuleType):

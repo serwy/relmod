@@ -150,14 +150,15 @@ class TestFunc(unittest.TestCase):
     def test_import_reload(self):
 
         # test fimport provides ModuleProxy
+        # assumes SmartCache
         files = {
             'x.py': '''if 1:
     import fakemod; local = fakemod.install(globals())
     fimport('./y.py')
     from . import y as _y
-    from .y import Y
+    from .y import *
     ''',
-            'y.py': '''Y=1'''
+            'y.py': '''Y=1''',
             }
         self.kf.update(files)
         lib = self.lib
