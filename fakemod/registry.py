@@ -62,11 +62,9 @@ class FakeModuleRegistry:
             # avoid restricted mode
             __builtins__['__import__'] = b.__import__
 
-
     @property
     def builtins(self):
         return self._builtins
-
 
     def _add_dep(self, file, inside):
         if inside:
@@ -95,8 +93,9 @@ class FakeModuleRegistry:
         ap = os.path.abspath(filename)
         f = filename
         if f != ap:
-            print(repr((f, ap)))
-            assert(f == ap)
+            print('WARNING: edge case for ' repr((f, ap)))
+            filename = os.path.sep + filename
+            #assert(f == ap)
         mod = fmods.FakeModuleType('fake')
         self._populate_module(mod, filename)
         return mod
@@ -230,7 +229,7 @@ class FakeModuleRegistry:
                     if fullpath:
                         self._add_dep(fullpath, inside)
 
-        return proxy.wrap(mod, inside)
+        return mod
 
     def _get_mod(self, d, name):
 
@@ -342,11 +341,25 @@ class FakeModuleRegistry:
         g['__fullpath__'] = file
         return self.up(file)
 
-    def reload(self, filename):
-        if isinstance(filename, fmods.FakeModuleType):
-            filename = filename.__fullpath__
+    def reload(self, filename_or_mod, inside='<reload>'):
+        if isinstance(filename_or_mod,
+                      (fmods.FakeModuleType, proxy.ModuleProxy)):
+            mod = filename_or_mod
+            filename = mod.__fullpath__
             filename = utils.split_init(filename)
+        else:
+            mod = None
+            filename = filename_or_mod
 
         fp = os.path.abspath(filename)
+        if not fp.endswith('.py'):
+            fp = os.path.join(fp, '__init__.py')
+        if fp not in self.mods:
+            raise ValueError('file not loaded: %r' % filename_or_mod)
+
         self.cache.invalidate(fp)
-        return self._load_file(fp)
+        s = self._load_file(fp)  # force load of the file
+        if mod is None:
+            mod = proxy.wrap(s, inside)
+
+        return mod

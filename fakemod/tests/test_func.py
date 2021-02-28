@@ -149,7 +149,6 @@ class TestFunc(unittest.TestCase):
         self.assertEqual(lib.main.sub.sub.b.y.Y, 2)
 
     def test_import_reload(self):
-
         # test fimport provides ModuleProxy
         # assumes SmartCache
         files = {
@@ -165,10 +164,11 @@ class TestFunc(unittest.TestCase):
         lib = self.lib
 
         self.assertEqual(lib.x.y.Y, 1)
+        self.assertEqual(lib.x._y.Y, 1)
 
         self.assertIsInstance(lib.x, fakemod.fmods.FakeModuleType)
+        self.assertIsInstance(lib.x._y, fakemod.fmods.FakeModuleType)
         self.assertIsInstance(lib.x.y, fakemod.proxy.ModuleProxy)
-        self.assertIsInstance(lib.x._y, fakemod.proxy.ModuleProxy)
 
         self.kf['y.py'] = 'Y=2'
 
@@ -179,14 +179,12 @@ class TestFunc(unittest.TestCase):
             )
 
         self.assertEqual(lib.x.Y, 2)
-        self.assertEqual(lib.x.y.Y, 2)
         self.assertEqual(lib.x._y.Y, 2)
 
         self.assertIs(
             fakemod.unwrap(lib.x.y),
             fakemod.unwrap(lib.x._y)
             )
-
 
 def run():
     unittest.main(__name__, verbosity=2)

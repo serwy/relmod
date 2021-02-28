@@ -1,6 +1,7 @@
 import os
 
 from . import utils
+from . import proxy
 
 
 def count_dots(p):
@@ -67,6 +68,7 @@ class FakeImport:
         if as_ == '*':
             return self._star(g, w)
         else:
+            w = proxy.wrap(w, g['__fullpath__'])
             if as_:
                 check = utils.fs_name_to_attr(as_)
                 if not check:
