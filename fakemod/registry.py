@@ -223,7 +223,7 @@ class FakeModuleRegistry:
                     if fullpath:
                         self._add_dep(fullpath, inside)
 
-        return mod
+        return proxy.wrap(mod, inside)
 
     def _get_mod(self, d, name):
 

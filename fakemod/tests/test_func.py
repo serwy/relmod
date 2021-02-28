@@ -8,15 +8,23 @@ import sys
 
 
 class TestFunc(unittest.TestCase):
+
     def setUp(self):
         self.base = tempfile.mkdtemp()
         self.kf = tkfs.TinyKeyFS(self.base)
         self.reg = fakemod.registry.FakeModuleRegistry()
         self.lib = self.reg._load_file(self.base)
 
+        # override registry
+        self._old = fakemod._default
+        fakemod._default = self.reg
+
     def tearDown(self):
         shutil.rmtree(self.base)
         self.reg.finder._remove_meta_path()
+
+        # restore registry
+        fakemod._default = self._old
 
     def test_getattr(self):
         files = {'main/getattr.py':'''if 1:
@@ -33,8 +41,6 @@ class TestFunc(unittest.TestCase):
         self.assertEqual(lib.main.getattr.y, 'y')
         with self.assertRaises(AttributeError):
             lib.main.getattr.error
-
-
 
     def test_dir(self):
         files = {'main/dir.py':'''if 1:
@@ -55,7 +61,6 @@ class TestFunc(unittest.TestCase):
         self.assertTrue('x' in mdir)
         self.assertTrue('y' in mdir)
         self.assertTrue('other' in mdir)
-
 
     def test_fakeimp_star(self):
         files = {'main/__init__.py': '',
@@ -141,6 +146,45 @@ class TestFunc(unittest.TestCase):
 
         self.assertEqual(lib.main.sub.sub.b.x.X, 1)
         self.assertEqual(lib.main.sub.sub.b.y.Y, 2)
+
+    def test_import_reload(self):
+
+        # test fimport provides ModuleProxy
+        files = {
+            'x.py': '''if 1:
+    import fakemod; local = fakemod.install(globals())
+    fimport('./y.py')
+    from . import y as _y
+    from .y import Y
+    ''',
+            'y.py': '''Y=1'''
+            }
+        self.kf.update(files)
+        lib = self.lib
+
+        self.assertEqual(lib.x.y.Y, 1)
+
+        self.assertIsInstance(lib.x, fakemod.fmods.FakeModuleType)
+        self.assertIsInstance(lib.x.y, fakemod.proxy.ModuleProxy)
+        self.assertIsInstance(lib.x._y, fakemod.proxy.ModuleProxy)
+
+        self.kf['y.py'] = 'Y=2'
+
+        # force invalidate due to fs timestamp resolution
+        # too great for execution speed
+        self.reg.cache.invalidate(
+            self.kf.path('y.py')
+            )
+
+        self.assertEqual(lib.x.Y, 2)
+        self.assertEqual(lib.x.y.Y, 2)
+        self.assertEqual(lib.x._y.Y, 2)
+
+        self.assertIs(
+            fakemod.unwrap(lib.x.y),
+            fakemod.unwrap(lib.x._y)
+            )
+
 
 def run():
     unittest.main(__name__, verbosity=2)
