@@ -102,7 +102,7 @@ class CacheTracer(CacheSystem):
 
 class NoCache(CacheSystem):
 
-    def load(self, factory, filename, inside):
+    def load(self, factory, filename):
         m = self.reg.mods[filename] = factory(filename)
         return m, False
 
@@ -113,7 +113,6 @@ class NoCache(CacheSystem):
 class FirstLoadCache(CacheSystem):
     def __init__(self, filestat):
         CacheSystem.__init__(self, filestat)
-        self.filestat = filestat
         self._invalid = set()
 
     def load(self, factory, filename):
