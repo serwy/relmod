@@ -26,6 +26,7 @@ class TestFunc(unittest.TestCase):
         # restore registry
         fakemod._default = self._old
 
+    @unittest.skipIf(sys.version < '3.7', 'PEP562 in 3.7')
     def test_getattr(self):
         files = {'main/getattr.py':'''if 1:
     x = 1
