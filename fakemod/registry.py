@@ -273,6 +273,12 @@ class FakeModuleRegistry:
 
         r = set(d.keys())
         for n in os.listdir(fp):
+            # is it a file?
+            dut = os.path.join(fp, n)
+            if os.path.isfile(dut):
+                if n[-3:] != '.py':
+                    continue
+
             n = utils.fs_name_to_attr(n)
             if n:
                 r.add(n)

@@ -254,6 +254,26 @@ class TestFakemod(unittest.TestCase):
         del self.kf['main/__init__.py']
         self.assertTrue(lib.main.__file__ is None)
 
+    def test_version(self):
+        self.assertTrue(
+            hasattr(fakemod, '__version__')
+            )
+
+
+    def test_dir_extension(self):
+        # bugfix where __dir__ of a browseable module
+        # returned all files without extensions
+        files = {'main/__init__.py': '',
+                'main/x.py':'X=1',
+                'main/a.txt':'hello',
+                'main/b':'hello',
+                 }
+        self.kf.update(files)
+        lib = self.lib
+        self.assertEqual(lib.main.x.X, 1)
+        self.assertTrue('b' not in dir(lib.main))
+        self.assertTrue('a' not in dir(lib.main))
+        self.assertTrue('x' in dir(lib.main))
 
 def run():
     unittest.main(__name__, verbosity=2)

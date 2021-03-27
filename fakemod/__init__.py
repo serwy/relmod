@@ -6,6 +6,7 @@ from . import autoimport
 
 from .runner import runtest, testonly, testmod
 from .proxy import wrap, unwrap
+from ._version import __version__
 
 _default = registry.FakeModuleRegistry()
 
