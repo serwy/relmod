@@ -68,6 +68,24 @@ which is the same as
     parent = fakemod.up('.')
 
 
+### Cell Mode
+
+The `.install` function will use the current working directory
+if `__file__` is not defined. This is useful in a cell-mode
+environment.
+
+    here = fakemod.install(globals())
+
+Using `.install` allows for relative imports within `__main__`:
+
+    from . import myfunc
+    print(myfunc.add(3, 4))
+
+Use the parent directory of `__file__` as a namespace:
+
+    here = fakemod.up(__file__)
+
+
 ### Top-level Modules
 
 You can register a directory or file as a top-level module and then import it.
@@ -92,18 +110,6 @@ Only run a single class in a test file and exit:
     @fakemod.testonly()
     class Test(unittest.TestCase):
         ...
-
-### Cell Mode
-
-The `.install` function will use the current working directory
-if `__file__` is not defined. This is useful in a cell-mode
-environment.
-
-    here = fakemod.install(globals())
-
-Use parent directory of `__file__`:
-
-    here = fakemod.up(__file__)
 
 
 ### Fake `fimport`, Fake `ffrom`
@@ -144,7 +150,7 @@ allowing for lazy deep-reloading of modules.
 
 ## Install
 
-    pip install fakemod
+    pip3 install fakemod
 
 
 ## Zen
