@@ -229,7 +229,11 @@ class FakeModuleRegistry:
                     if fullpath:
                         self._add_dep(fullpath, inside)
 
-        return mod
+        use_proxy = gb.get('__fakeproxy__', True)
+        if use_proxy:
+            return proxy.wrap(mod, inside=inside)
+        else:
+            return mod
 
     def _get_mod(self, d, name):
 
@@ -337,6 +341,7 @@ class FakeModuleRegistry:
     def install(self, globalsdict):
         g = globalsdict
         g['__fakeregistry__'] = self
+        g['__fakeproxy__'] = True
         g['fimport'] = fakeimp.FakeImport(g)
         g['ffrom'] = fakeimp.FakeFrom(g)
 

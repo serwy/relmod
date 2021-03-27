@@ -21,12 +21,14 @@ class FakeLoader:
 
         base, sep, rest = fullname.partition('.')
 
-        fullpath = self.fs.finder.toplevel[base]
+        fullpath, use_proxy = self.fs.finder.toplevel[base]
         reg = self.fs.finder.registry
 
         mod = reg._load_file(fullpath)
         if mod.__file__:
             reg._add_dep(mod.__file__, '<toplevel import>')
+
+        mod.__dict__['__fakeproxy__'] = use_proxy
 
         # walk the name
         while rest:
@@ -34,15 +36,23 @@ class FakeLoader:
             mod = getattr(mod, name)
 
         self.fs.origin = mod.__dict__['__file__']
-        sys.modules[fullname] = mod
+
+        if use_proxy:
+            wmod = proxy.wrap(mod)
+        else:
+            wmod = mod
+
+        sys.modules[fullname] = wmod
+        self.fs.finder._sysmods[fullname] = wmod
         return mod
 
 
 class FakeSpec:
-    def __init__(self, finder, fullname, fullpath):
+    def __init__(self, finder, fullname, fullpath, use_proxy):
 
         self.finder = finder
         self.fullname = fullname
+        self.use_proxy = use_proxy
 
         self.name = fullname
         self.submodule_search_locations = []
@@ -63,10 +73,18 @@ class FakeFinder:
         self.registry = registry
         sys.meta_path.insert(0, self)
         self.toplevel = {}
+        self._sysmods = {}  # cache of what was added
 
     def _remove_meta_path(self):
         if self in sys.meta_path:
             sys.meta_path.remove(self)
+
+    def _remove_sys_modules(self):
+        for k, v in self._sysmods.items():
+            if k in sys.modules:
+                if sys.modules[k] is v:
+                    sys.modules.pop(k)
+        self._sysmods.clear()
 
     def __getattr__(self, name):
         if name not in ('find_spec',):
@@ -76,17 +94,17 @@ class FakeFinder:
     def invalidate_caches(self, *args):
         pass
 
-    def register(self, name, fullpath):
+    def register(self, name, fullpath, proxy=True):
         fp = os.path.abspath(fullpath)
         fp = utils.split_init(fp)
-        self.toplevel[name] = fp
+        self.toplevel[name] = (fp, proxy)
 
     def _find_spec(self, fullname, path=None, target=None):
         #print('find_spec', id(self), fullname, path, target)
-        for t, fullpath in self.toplevel.items():
+        for t, (fullpath, use_proxy) in self.toplevel.items():
             if fullname.partition('.')[0] == t:
                 #print('--- find_spec', fullname)
-                return FakeSpec(self, fullname, fullpath)
+                return FakeSpec(self, fullname, fullpath, use_proxy)
 
     # python 3.3
     def find_module(self, fullname, path=None):

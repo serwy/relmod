@@ -34,7 +34,7 @@ def reload(filename):
 def toplevel(toplevel, filename):
     if isinstance(filename, fmods.FakeModuleType):
         filename = filename.__fullpath__
-    _default.finder.register(toplevel, filename)
+    _default.finder.register(toplevel, filename, proxy=True)
 
 auto = autoimport.AutoImport()
 

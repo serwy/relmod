@@ -7,6 +7,8 @@ from pprint import pprint
 import sys
 
 
+from fakemod import proxy
+
 class TestFunc(unittest.TestCase):
 
     def setUp(self):
@@ -22,6 +24,7 @@ class TestFunc(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.base)
         self.reg.finder._remove_meta_path()
+        self.reg.finder._remove_sys_modules()
 
         # restore registry
         fakemod._default = self._old
@@ -167,7 +170,7 @@ class TestFunc(unittest.TestCase):
         self.assertEqual(lib.x._y.Y, 1)
 
         self.assertIsInstance(lib.x, fakemod.fmods.FakeModuleType)
-        self.assertIsInstance(lib.x._y, fakemod.fmods.FakeModuleType)
+        self.assertIsInstance(lib.x._y, fakemod.proxy.ModuleProxy)
         self.assertIsInstance(lib.x.y, fakemod.proxy.ModuleProxy)
 
         self.kf['y.py'] = 'Y=2'
@@ -185,6 +188,53 @@ class TestFunc(unittest.TestCase):
             fakemod.unwrap(lib.x.y),
             fakemod.unwrap(lib.x._y)
             )
+
+
+    def test_import_proxy(self):  # for later
+        # test fimport provides ModuleProxy
+        # assumes SmartCache
+        BASE = self.base
+        files = {
+            'x.py': f'''if 1:
+    import fakemod; fakemod.install(globals())
+    fakemod.toplevel('yyy2', '{BASE}/y2.py')
+    import yyy2
+    from . import z
+    __fakeproxy__ = False
+    from . import z2
+    ''',
+            'y.py': '''if 1:
+    from . import z
+    from .z import Z''',
+            'y2.py': '''if 1:
+    from . import z2
+    from .z2 import Z''',
+            'z.py': '''from .zcache import Z''',
+            'z2.py': '''from .zcache import Z''',
+            'zcache.py':'''Z=3''',
+            }
+        self.kf.update(files)
+        lib = self.lib
+
+        self.assertIsInstance(lib.x.yyy2, fakemod.proxy.ModuleProxy)
+
+        self.assertIsInstance(lib.x.z, fakemod.proxy.ModuleProxy)
+        self.assertIsInstance(lib.x.z2, fakemod.fmods.FakeModuleType)
+
+        self.assertIsInstance(proxy.unwrap(lib.x.yyy2).z2, fakemod.proxy.ModuleProxy)
+
+        self.assertEqual(proxy.unwrap(lib.x.yyy2).Z, 3)
+
+        self.kf['zcache.py'] = 'Z=0'
+
+        # force invalidate due to fs timestamp resolution
+        # too great for execution speed
+        self.reg.cache.invalidate(
+            self.kf.path('zcache.py')
+            )
+
+        self.assertEqual(lib.x.yyy2.Z, 0)
+
 
 def run():
     unittest.main(__name__, verbosity=2)

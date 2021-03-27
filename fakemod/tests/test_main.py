@@ -259,7 +259,6 @@ class TestFakemod(unittest.TestCase):
             hasattr(fakemod, '__version__')
             )
 
-
     def test_dir_extension(self):
         # bugfix where __dir__ of a browseable module
         # returned all files without extensions
