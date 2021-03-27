@@ -195,14 +195,14 @@ class TestFunc(unittest.TestCase):
         # assumes SmartCache
         BASE = self.base
         files = {
-            'x.py': f'''if 1:
+            'x.py': '''if 1:
     import fakemod; fakemod.install(globals())
     fakemod.toplevel('yyy2', '{BASE}/y2.py')
     import yyy2
     from . import z
     __fakeproxy__ = False
     from . import z2
-    ''',
+    '''.format(BASE=BASE),
             'y.py': '''if 1:
     from . import z
     from .z import Z''',
