@@ -10,6 +10,7 @@ def _stat_changed(old_stat, new_stat):
 
 
 class FileStat:
+
     def __init__(self):
         self.stats = {}
         self.inhibit = False
@@ -36,6 +37,11 @@ class FileStat:
     def changed(self, s1, s2):
         res = _stat_changed(s1, s2)
         return res
+
+    def file_changed(self, filename):
+        s1 = self.stats.get(filename, _blank_stat)
+        s2 = self.stat(filename)
+        return self.changed(s1, s2)
 
 
 def deep_check_list(filename, deps):

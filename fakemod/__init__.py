@@ -7,11 +7,14 @@ from . import autoimport
 from .runner import runtest, testonly, testmod
 from .proxy import wrap, unwrap
 from ._version import __version__
+from . import fakesite
+
 
 _default = registry.FakeModuleRegistry()
 
 __all__ = ['at', 'up', 'install', 'reload', 'toplevel',
-           'auto', 'runtest', 'testonly', 'testmod']
+           'auto', 'runtest', 'testonly', 'testmod',
+           'site',]
 
 def at(fp, inside='__file__'):
     mod = _default.at(fp, inside)
@@ -37,7 +40,7 @@ def toplevel(toplevel, filename):
     _default.finder.register(toplevel, filename, proxy=True)
 
 auto = autoimport.AutoImport()
-
+site = fakesite.create_default_site(_default)
 
 def deps(dirs=True, files=True):
     __deps(_default._deps, dirs, files)

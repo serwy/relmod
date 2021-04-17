@@ -1,13 +1,16 @@
 import fakemod
 from fakemod.tests import tkfs
+
 import unittest
 import tempfile
 import shutil
 from pprint import pprint
 import sys
+import json
 
 
 from fakemod import proxy
+from fakemod import fakesite
 
 class TestFunc(unittest.TestCase):
 
@@ -234,6 +237,44 @@ class TestFunc(unittest.TestCase):
             )
 
         self.assertEqual(lib.x.yyy2.Z, 0)
+
+
+    def test_site(self):
+        site = fakesite.FakeSite(self.reg)
+        self.assertFalse(dir(site))  # empty
+
+        kf = self.kf
+
+        kf['a1.py'] = 'value = 123'
+        kf['a.site'] = json.dumps([('abc', kf.path('a1.py'))])
+
+        # user-set item
+        site['AAA'] = kf.path('a1.py')
+        self.assertEqual(site.AAA.value, 123)
+
+        # user-set use
+        (~site).use(kf.path('a.site'))
+        self.assertEqual(site.abc.value, 123)
+
+        # clear it
+        (~site).reset()
+        self.assertFalse(dir(site))  # empty
+        (~site).set_site_files('', [kf.path('a.site')])
+        self.assertEqual(site.abc.value, 123)
+
+        # test site break
+        (~site).set_site_files('break', [kf.path('a.site')])
+        self.assertFalse(dir(site))  # empty
+
+        # test site empty
+        (~site).set_site_files('', [])
+        self.assertFalse(dir(site))  # empty
+
+
+        # test site from env variable
+        (~site).set_site_files(kf.path('a.site'), [])
+        self.assertEqual(site.abc.value, 123)
+
 
 
 def run():
