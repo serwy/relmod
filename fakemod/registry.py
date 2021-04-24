@@ -6,6 +6,7 @@ import os
 import weakref
 import types
 from collections import defaultdict
+import threading
 
 if not PY27:
     import builtins
@@ -37,6 +38,7 @@ def _wdict(mod):
 
 class FakeModuleRegistry:
     def __init__(self):
+        self._modlock = threading.RLock()
         self.cache = cache.SmartCache(self)
         self.mods = {}
         self._deps = defaultdict(lambda: defaultdict(int))
@@ -294,26 +296,27 @@ class FakeModuleRegistry:
         return sorted(r)
 
     def _load_file(self, file):
-        # file is abspath at this point
-        if not file.endswith('.py'):
-            # assuming directory
-            file = os.path.join(file, '__init__.py')
+        with self._modlock:
+            # file is abspath at this point
+            if not file.endswith('.py'):
+                # assuming directory
+                file = os.path.join(file, '__init__.py')
 
-        if self.log is not None:
-            self.log.append(('start', file))
+            if self.log is not None:
+                self.log.append(('start', file))
 
-        def factory(filename):  # called by cache in case of reload
-            return self._factory(filename)
+            def factory(filename):  # called by cache in case of reload
+                return self._factory(filename)
 
-        self._active.add(file)
-        try:
-            mod, from_cache = self.cache.load(factory, file)
-        finally:
-            self._active.discard(file)
+            self._active.add(file)
+            try:
+                mod, from_cache = self.cache.load(factory, file)
+            finally:
+                self._active.discard(file)
 
-        if self.log is not None:
-            self.log.append(('stop', file, from_cache))
-        return mod
+            if self.log is not None:
+                self.log.append(('stop', file, from_cache))
+            return mod
 
     #------
     # API
