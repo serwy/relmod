@@ -12,7 +12,7 @@ setup(
     license="BSD License",
     keywords="reload module",
     url="http://github.com/serwy/relmod",
-    packages=['relmod', 'relmod.tests', 'fakemod'],
+    packages=['relmod', 'relmod.tests'],
     description='Auto-Reloadable Modules and Namespaces',
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',
