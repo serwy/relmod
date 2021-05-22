@@ -1,15 +1,11 @@
 from __future__ import print_function
 import sys
-PY27 = sys.version < '3'
 
 import os
 import weakref
 import types
 from collections import defaultdict
 import threading
-
-if not PY27:
-    import builtins
 
 from . import cache
 from . import fmods
@@ -35,7 +31,6 @@ def _wdict(mod):
     return wd
 
 
-
 class FakeModuleRegistry:
     def __init__(self):
         self._modlock = threading.RLock()
@@ -48,6 +43,7 @@ class FakeModuleRegistry:
         self._hard_reset = set()
         self._hard_reset_always = set()
         self._active = set()
+        self._toplevel_name = __name__.partition('.')[0]
 
         b = fmods.FakeBuiltins('fake_builtins')
         @b.override('__import__')
@@ -60,9 +56,6 @@ class FakeModuleRegistry:
                     return self._import(name, globals, locals, fromlist, level)
             return _imp
         self._builtins = b
-        if PY27:
-            # avoid restricted mode
-            __builtins__['__import__'] = b.__import__
 
     @property
     def builtins(self):
@@ -120,10 +113,10 @@ class FakeModuleRegistry:
             browse = True
 
 
-        d['__name__'] = 'fakemod.at(%r)' % filename
+        d['__name__'] = '%s.at("%s")' % (self._toplevel_name, filename)
+        d['__fakename__'] = d['__name__']  # used by FakeModuleType repr
         d['__file__'] = file
-        if not PY27:
-            d['__builtins__'] = self.builtins
+        d['__builtins__'] = self.builtins
         d['__path__'] = path
 
         d['__fullpath__'] = filename

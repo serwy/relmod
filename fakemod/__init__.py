@@ -1,70 +1,44 @@
-import os
+"""
+fakemod redirection stub
 
-from . import proxy
-from . import registry
-from . import autoimport
+The `fakemod` package has been renamed to `relmod`.
+Using `import fakemod` in existing code will work,
+but will issue a warning message to change the code.
 
-from .runner import runtest, testonly, testmod
-from .proxy import wrap, unwrap
-from ._version import __version__
-from . import fakesite
+Any `fakemod.site` files will need to be renamed to
+`relmod.site`. For the moment, both are valid.
 
+"""
 
-_default = registry.FakeModuleRegistry()
+import relmod
+from relmod import *
+__all__ = relmod.__all__[:]
 
-__all__ = ['at', 'up', 'install', 'reload', 'toplevel',
-           'auto', 'runtest', 'testonly', 'testmod',
-           'site',]
+def __warn():
+    import sys
+    import os
+    frm = sys._getframe()
+    # walk up the frame, find where fakemod is imported
+    frm = frm.f_back
+    stacklevel = 3
+    for _ in range(10):
+        frm = frm.f_back
+        if frm is None:
+            break
+        filename = frm.f_code.co_filename
+        if filename.startswith('<frozen'):
+            continue
+        head, tail = os.path.split(filename.lower())
+        if head.endswith('relmod'):
+            stacklevel += 1
+            continue
+        break
 
-def at(fp, inside='__file__'):
-    mod = _default.at(fp, inside)
-    return mod
+    import warnings as _warnings
+    _warnings.warn(
+        "`fakemod` renamed to `relmod`, "
+        "use `import relmod as fakemod`",
+        stacklevel=stacklevel,
+    )
 
-def up(__file__):
-    mod = _default.up(__file__)
-    return mod
-
-def install(globalsdict):
-    g = globalsdict
-    mod = _default.install(g)
-    if g['__name__'] == '__main__':
-        __builtins__['__import__'] = _default.builtins.__import__
-    return mod
-
-def reload(filename):
-    return _default.reload(filename)
-
-def toplevel(toplevel, filename):
-    if isinstance(filename, fmods.FakeModuleType):
-        filename = filename.__fullpath__
-    _default.finder.register(toplevel, filename, proxy=True)
-
-auto = autoimport.AutoImport()
-site = fakesite.create_default_site(_default)
-
-def deps(dirs=True, files=True):
-    __deps(_default._deps, dirs, files)
-
-def revdeps(dirs=True, files=True):
-    __deps(_default._revdeps, dirs, files)
-
-def __deps(deps, dirs=True, files=True):
-
-    for k in sorted(deps.keys()):
-        v = deps[k]
-        if not files:
-            if os.path.isfile(k):
-                continue
-        if not dirs:
-            if os.path.isdir(k):
-                continue
-        print(k)
-        for k2 in sorted(v.keys()):
-            v2 = v[k2]
-            if not files:
-                if os.path.isfile(k2):
-                    continue
-            if not dirs:
-                if os.path.isdir(k2):
-                    continue
-            print('\t %4i %s ' % (v2, k2))
+__warn()

@@ -1,5 +1,5 @@
-import fakemod
-from fakemod.tests import tkfs
+import relmod
+from relmod.tests import tkfs
 
 import unittest
 import tempfile
@@ -9,20 +9,20 @@ import sys
 import json
 
 
-from fakemod import proxy
-from fakemod import fakesite
+from relmod import proxy
+from relmod import fakesite
 
 class TestFunc(unittest.TestCase):
 
     def setUp(self):
         self.base = tempfile.mkdtemp()
         self.kf = tkfs.TinyKeyFS(self.base)
-        self.reg = fakemod.registry.FakeModuleRegistry()
+        self.reg = relmod.registry.FakeModuleRegistry()
         self.lib = self.reg._load_file(self.base)
 
         # override registry
-        self._old = fakemod._default
-        fakemod._default = self.reg
+        self._old = relmod._default
+        relmod._default = self.reg
 
     def tearDown(self):
         shutil.rmtree(self.base)
@@ -30,7 +30,7 @@ class TestFunc(unittest.TestCase):
         self.reg.finder._remove_sys_modules()
 
         # restore registry
-        fakemod._default = self._old
+        relmod._default = self._old
 
     @unittest.skipIf(sys.version < '3.7', 'PEP562 in 3.7')
     def test_getattr(self):
@@ -74,8 +74,8 @@ class TestFunc(unittest.TestCase):
                   'main/x.py':'X=1; Y=2; Z=3 ',
                   'main/y.py':'X=4; Y=5; Z=6 ',
                   'main/a.py':'''if 1:
-                    import fakemod
-                    local=fakemod.install(globals())
+                    import relmod
+                    local=relmod.install(globals())
                     ''',
                   }
         self.kf.update(files)
@@ -97,34 +97,34 @@ class TestFunc(unittest.TestCase):
                   'main/x.py':'X=1; Y=2; Z=3 ',
                   'main/y.py':'X=4; Y=5; Z=6 ',
                   'main/a.py':'''if 1:
-                    import fakemod
-                    local=fakemod.install(globals())
+                    import relmod
+                    local=relmod.install(globals())
                     ''',
                   }
         self.kf.update(files)
 
         p = self.kf.path('main/x.py')
-        x = fakemod.at(p)
+        x = relmod.at(p)
         self.assertEqual(x.X, 1)
 
-        lib = fakemod.up(p)
+        lib = relmod.up(p)
         self.assertEqual(lib.x.X, 1)
         self.assertEqual(lib.y.X, 4)
 
         lib.y.X = 10
         self.assertEqual(lib.y.X, 10)
-        fakemod.reload(lib.y.__file__)
+        relmod.reload(lib.y.__file__)
         self.assertEqual(lib.y.X, 4)
 
         g = {'__name__':'__main__',
              '__file__':self.kf.path('main/__init__.py')}
 
-        local = fakemod.install(g)
+        local = relmod.install(g)
         self.assertTrue('fimport' in g)
         self.assertTrue('ffrom' in g)
 
 
-        fakemod.toplevel('fm_main_x', lib.x.__file__)
+        relmod.toplevel('fm_main_x', lib.x.__file__)
         try:
             import fm_main_x
             self.assertEqual(fm_main_x.X, 1)
@@ -133,12 +133,12 @@ class TestFunc(unittest.TestCase):
 
     def test_deep_fimport(self):
         files = {'main/sub/sub/a.py': '''if 1:
-    import fakemod; local = fakemod.install(globals())
+    import relmod; local = relmod.install(globals())
     fimport('../x.py')
     fimport('../../y.py')
     ''',
                  'main/sub/sub/b.py': '''if 1:
-    import fakemod; local = fakemod.install(globals())
+    import relmod; local = relmod.install(globals())
     fimport('..x')
     fimport('...y')
     ''',
@@ -159,7 +159,7 @@ class TestFunc(unittest.TestCase):
         # assumes SmartCache
         files = {
             'x.py': '''if 1:
-    import fakemod; local = fakemod.install(globals())
+    import relmod; local = relmod.install(globals())
     fimport('./y.py')
     from . import y as _y
     from .y import *
@@ -172,9 +172,9 @@ class TestFunc(unittest.TestCase):
         self.assertEqual(lib.x.y.Y, 1)
         self.assertEqual(lib.x._y.Y, 1)
 
-        self.assertIsInstance(lib.x, fakemod.fmods.FakeModuleType)
-        self.assertIsInstance(lib.x._y, fakemod.proxy.ModuleProxy)
-        self.assertIsInstance(lib.x.y, fakemod.proxy.ModuleProxy)
+        self.assertIsInstance(lib.x, relmod.fmods.FakeModuleType)
+        self.assertIsInstance(lib.x._y, relmod.proxy.ModuleProxy)
+        self.assertIsInstance(lib.x.y, relmod.proxy.ModuleProxy)
 
         self.kf['y.py'] = 'Y=2'
 
@@ -188,8 +188,8 @@ class TestFunc(unittest.TestCase):
         self.assertEqual(lib.x._y.Y, 2)
 
         self.assertIs(
-            fakemod.unwrap(lib.x.y),
-            fakemod.unwrap(lib.x._y)
+            relmod.unwrap(lib.x.y),
+            relmod.unwrap(lib.x._y)
             )
 
 
@@ -199,8 +199,8 @@ class TestFunc(unittest.TestCase):
         BASE = self.base
         files = {
             'x.py': '''if 1:
-    import fakemod; fakemod.install(globals())
-    fakemod.toplevel('yyy2', '{BASE}/y2.py')
+    import relmod; relmod.install(globals())
+    relmod.toplevel('yyy2', '{BASE}/y2.py')
     import yyy2
     from . import z
     __fakeproxy__ = False
@@ -219,12 +219,12 @@ class TestFunc(unittest.TestCase):
         self.kf.update(files)
         lib = self.lib
 
-        self.assertIsInstance(lib.x.yyy2, fakemod.proxy.ModuleProxy)
+        self.assertIsInstance(lib.x.yyy2, relmod.proxy.ModuleProxy)
 
-        self.assertIsInstance(lib.x.z, fakemod.proxy.ModuleProxy)
-        self.assertIsInstance(lib.x.z2, fakemod.fmods.FakeModuleType)
+        self.assertIsInstance(lib.x.z, relmod.proxy.ModuleProxy)
+        self.assertIsInstance(lib.x.z2, relmod.fmods.FakeModuleType)
 
-        self.assertIsInstance(proxy.unwrap(lib.x.yyy2).z2, fakemod.proxy.ModuleProxy)
+        self.assertIsInstance(proxy.unwrap(lib.x.yyy2).z2, relmod.proxy.ModuleProxy)
 
         self.assertEqual(proxy.unwrap(lib.x.yyy2).Z, 3)
 

@@ -1,18 +1,18 @@
 from setuptools import setup
-from fakemod._version import __version__
+from relmod._version import __version__
 
 with open('README.md', 'rb') as fid:
     LONG_DESCRIPTION = fid.read().decode('utf8')
 
 setup(
-    name='fakemod',
+    name='relmod',
     version=__version__,
     author='Roger D. Serwy',
     author_email='roger.serwy@gmail.com',
     license="BSD License",
     keywords="reload module",
-    url="http://github.com/serwy/fakemod",
-    packages=['fakemod', 'fakemod.tests'],
+    url="http://github.com/serwy/relmod",
+    packages=['relmod', 'relmod.tests', 'fakemod'],
     description='Auto-Reloadable Modules and Namespaces',
     long_description=LONG_DESCRIPTION,
     long_description_content_type='text/markdown',

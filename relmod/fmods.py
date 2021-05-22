@@ -1,12 +1,6 @@
 import os
 import types
-
-try:
-    import builtins
-except:
-    # python 2.7, because why not
-    builtins = lambda: None
-    builtins.__dict__ = __builtins__
+import builtins
 
 
 class FakeBuiltins(types.ModuleType):
@@ -42,13 +36,7 @@ class FakeBuiltins(types.ModuleType):
 class FakeModuleType(types.ModuleType):
 
     def __repr__(self):
-        if self.__name__.startswith('fakemod.at'):
-            return '<fakemodule %r>' % (
-            self.__name__,)
-        else:
-            # importlib reload changed the name
-            return '<fakemodule %r from %r>' % (
-            self.__name__, self.__fullpath__)
+        return '<fakemodule %r>' % (self.__fakename__)
 
     def __getitem__(self, name):
         return self.__getattr__(name)

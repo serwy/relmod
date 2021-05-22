@@ -57,3 +57,22 @@ def split_init(fp):
     if tail == '__init__.py':
         fp = head
     return fp
+
+
+def execfile(filename, globals=None, locals=None,
+             flags=0, dont_inherit=False):
+    """execute a filename in the given dictionary, using
+       provided compile flags."""
+    if globals is None:
+        import __main__
+        globals = __main__.__dict__
+
+    fullpath = os.path.abspath(filename)
+    with open(fullpath, 'r') as f:
+        src = f.read()
+
+    code = compile(src, fullpath, 'exec',
+                   flags=flags,
+                   dont_inherit=dont_inherit)
+
+    exec(code, globals, locals)

@@ -1,5 +1,5 @@
-import fakemod
-from fakemod.tests import tkfs
+import relmod
+from relmod.tests import tkfs
 import unittest
 import tempfile
 import shutil
@@ -12,7 +12,7 @@ class TestFakemod(unittest.TestCase):
     def setUp(self):
         self.base = tempfile.mkdtemp()
         self.kf = tkfs.TinyKeyFS(self.base)
-        self.reg = fakemod.registry.FakeModuleRegistry()
+        self.reg = relmod.registry.FakeModuleRegistry()
         self.lib = self.reg._load_file(self.base)
 
     def tearDown(self):
@@ -116,8 +116,8 @@ class TestFakemod(unittest.TestCase):
         files = {'main/__init__.py': '',
                   'main/x.py':'X=1',
                   'main/a.py':'''if 1:
-                    import fakemod
-                    local=fakemod.install(globals())
+                    import relmod
+                    local=relmod.install(globals())
                     ''',
                   }
         self.kf.update(files)
@@ -143,7 +143,7 @@ class TestFakemod(unittest.TestCase):
 
     def test_spaces(self):
         files = {'main/__init__.py': """if 1:
-                import fakemod; fakemod.install(globals())
+                import relmod; relmod.install(globals())
                 """,
                   'main/x x.py':'X=1',
                   }
@@ -208,13 +208,13 @@ class TestFakemod(unittest.TestCase):
 
 
     def test_auto(self):
-        self.assertIs(fakemod.auto.pprint.pprint, pprint)
+        self.assertIs(relmod.auto.pprint.pprint, pprint)
 
     def test_relative_getitem(self):
         files = {'main/__init__.py': '',
                  'main/sub/a.py': '''if 1:
-                     import fakemod;
-                     local = fakemod.install(globals())
+                     import relmod;
+                     local = relmod.install(globals())
                      x = local['../']
                      b = local['../b.py']
                      #c = local['..b']
@@ -256,7 +256,7 @@ class TestFakemod(unittest.TestCase):
 
     def test_version(self):
         self.assertTrue(
-            hasattr(fakemod, '__version__')
+            hasattr(relmod, '__version__')
             )
 
     def test_dir_extension(self):
