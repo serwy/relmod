@@ -10,20 +10,21 @@ Running the following:
 
     import relmod
 
+    # create a file with a function
     with open('./myfunc.py', 'w') as f:
         f.write("""
     def add(x, y):
         return x + y
-    """)  # create a file with a function
+    """)
 
-    lib = relmod.at('.')  # create a local namespace module
+    myfunc = relmod.at('./myfunc.py')  # load as a module
 
-    print(lib.myfunc.add(3, 4))  # call the function from myfunc.py
+    print(myfunc.add(3, 4))  # call the function
 
     import unittest
     class TestMyFunc(unittest.TestCase):
         def test_add(self):
-            self.assertEqual(lib.myfunc.add(3, 4), 7)  # create a test
+            self.assertEqual(myfunc.add(3, 4), 7)  # create a test
 
     relmod.runtest(TestMyFunc)  # run the test
 
@@ -54,13 +55,16 @@ Python library. Packaging is up to you.
 ## Examples
 
 
-Use a file directly:
+Use a directory as a namespace module:
 
-    myfunc = relmod.at('./myfunc.py')
+    lib = relmod.at('.')
+
+Entering folders that are not valid Python identifiers is supported:
+
+    py = lib['./Documents and Settings'].sub.folders
 
 Relative directories can be given:
 
-    lib = relmod.at('.')
     parent = lib['../']  # go up a directory, using []
 
 which is the same as
@@ -147,6 +151,10 @@ behave as regular Python modules, with enhancements. Relative
 imports within a fake module perform dependency tracking,
 allowing for lazy deep-reloading of modules.
 
+The auto-reloading of a module's source __will not hot-patch__ existing
+objects like the `%autoreload%` magic from IPython. Hot-patching makes
+certain assumptions about your code, and if violated, will introduce
+subtle bugs.
 
 ## Install
 
