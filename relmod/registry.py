@@ -316,7 +316,7 @@ class FakeModuleRegistry:
     #------
 
     def at(self, fp, inside='__file__'):
-        fp = os.path.abspath(fp)
+        fp = utils.expand_path(fp)
         if os.path.exists(fp):
             s = self._load_file(fp)
         else:
@@ -330,7 +330,7 @@ class FakeModuleRegistry:
         return s
 
     def up(self, __file__):
-        f = os.path.abspath(__file__)
+        f = utils.expand_path(__file__)
         head, tail = os.path.split(f)
         return self.at(head, f)
 
@@ -358,7 +358,7 @@ class FakeModuleRegistry:
             mod = None
             filename = filename_or_mod
 
-        fp = os.path.abspath(filename)
+        fp = utils.expand_path(filename)
         if not fp.endswith('.py'):
             fp = os.path.join(fp, '__init__.py')
         if fp not in self.mods:

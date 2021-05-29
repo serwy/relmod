@@ -45,6 +45,10 @@ def fs_name_to_attr(n):
     return n
 
 
+def expand_path(path):
+    p = os.path.expanduser(path)
+    return os.path.abspath(p)
+
 def grab_init(fp):
     if os.path.isdir(fp):
         fpy = os.path.join(fp, '__init__.py')

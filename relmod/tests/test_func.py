@@ -7,7 +7,7 @@ import shutil
 from pprint import pprint
 import sys
 import json
-
+import os
 
 from relmod import proxy
 from relmod import fakesite
@@ -275,6 +275,18 @@ class TestFunc(unittest.TestCase):
         (~site).set_site_files(kf.path('a.site'), [])
         self.assertEqual(site.abc.value, 123)
 
+
+    def test_expand_user(self):
+        try:
+            kf = self.kf
+            kf['home/a1.py'] = 'value = 123'
+            home = os.environ.get('HOME', None)
+            os.environ['HOME'] = kf.path('home')
+            a1 = self.reg.at('~/a1.py')
+            self.assertEqual(a1.value, 123)
+        finally:
+            if home is not None:
+                os.environ['HOME'] = home
 
 
 def run():
