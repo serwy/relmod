@@ -1,4 +1,5 @@
 import os
+import sys
 
 from . import proxy
 from . import registry
@@ -15,7 +16,7 @@ _default = registry.FakeModuleRegistry()
 
 __all__ = ['at', 'up', 'install', 'reload', 'toplevel',
            'auto', 'runtest', 'testonly', 'testmod',
-           'site', 'execfile']
+           'site', 'execfile', 'imp']
 
 def at(fp, inside='__file__'):
     mod = _default.at(fp, inside)
@@ -42,6 +43,39 @@ def toplevel(toplevel, filename):
 
 auto = autoimport.AutoImport()
 site = fakesite.create_default_site(_default)
+
+
+def imp(modname, what, globals=None):
+    """import names from module into provided namespace"""
+    if globals is None:
+        frame = sys._getframe()
+        globals = frame.f_back.f_globals
+
+    if isinstance(modname, str):
+        mod = at(modname)
+    else:
+        mod = modname
+
+    names = [i.strip() for i in what.split(',')]
+
+    if '*' in names:
+        _all = getattr(mod, '__all__', None)
+        if _all is None:
+            _all = [i for i in dir(mod) if not i.startswith('_')]
+        names.extend(_all)
+        while '*' in names:
+            names.remove('*')
+
+    for n in names:
+        if ':' in n:
+            src, dst = n.split(':')
+        elif ' as ' in n:
+            src, dst = n.split(' as ')
+        else:
+            src = dst = n
+
+        globals[dst.strip()] = getattr(mod, src.strip())
+
 
 def deps(dirs=True, files=True):
     __deps(_default._deps, dirs, files)
