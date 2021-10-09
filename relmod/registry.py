@@ -11,7 +11,7 @@ from . import cache
 from . import fmods
 from . import utils
 from . import finder
-from . import fakeimp
+from . import fakeimp   # deprecated
 from . import proxy
 
 _print = print
@@ -340,6 +340,7 @@ class FakeModuleRegistry:
         g['__fakeproxy__'] = True
         g['fimport'] = fakeimp.FakeImport(g)
         g['ffrom'] = fakeimp.FakeFrom(g)
+
 
         file = g.get('__file__')
         if file is None:

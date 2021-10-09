@@ -1,9 +1,9 @@
 # `relmod` - auto-reloading module development library
 
-Place your Python cell code in a directory and start using it immediately.
+Place your Python code in a directory and start using it immediately.
 
-* Use directories as auto-loading namespaces.
-* Use file names as auto-deep-reloading modules.
+* Import file names as auto-deep-reloading modules.
+* Import directories as auto-loading namespaces.
 * Run `unittest` cases easily.
 
 Running the following:
@@ -55,7 +55,7 @@ Python library. Packaging is up to you.
 ## Examples
 
 
-Use a directory as a namespace module:
+Use the current working directory as a namespace module:
 
     lib = relmod.at('.')
 
@@ -116,31 +116,40 @@ Only run a single class in a test file and exit:
         ...
 
 
-### Fake `fimport`, Fake `ffrom`
+### Importing
 
-The `fimport` and `ffrom` objects can accept filesystem paths or
-a Python-like relative import with leading dots.
+Import an object from a module into the global namespace:
 
-To use fake import, fake from:
+    relmod.imp('./myfunc.py', 'add')
 
-    relmod.install(globals())  # injects fimport, ffrom
+Rename references in the import using `as`
 
-    fimport('./myfunc.py', as_='myfunc')
-    myfunc.add(3, 4)
+    relmod.imp('./myfunc.py', 'add as add2')
+    print(add2(3, 4))
 
-Import a nested name directly:
+Names can be comma-separated, e.g. `'add, sub, mult, div'`.
 
-    fimport('.myfunc.add')
-    print(add(3,4))
 
-which is the same as
+Import a filename as another name:
 
-    ffrom('.myfunc', import_='add')
+    relmod.imp('./myfunc.py as mfunc')
+    mfunc.add(1, 2)
+
+__Note:__ Non-module objects imported using `relmod.imp` are not automatically
+reloaded if changes occur to the file. You will need to reimport them.
+
+An important relative path resolution difference exists between `.imp` and `.at`.
+Using `relmod.imp` will make use of the `__file__` value from the global
+namespace to resolve a relative directory, whereas `relmod.at` uses the current
+working directory.
+
+The prior importing functions `fimport` and `ffrom` have been
+deprecated and will be removed in a later version.
 
 
 ## How it works
 
-The `.at`, `.up`, `.install` functions return `FakeModuleType` objects
+The `.at`, `.up`, `.install`, `.imp` functions return `FakeModuleType` objects
 wrapped in a `ModuleProxy` object that triggers reloading when
 accessing its attributes, if needed. Namespace and `__init__.py` fake
 modules perform auto-reloading on attribute access as well.

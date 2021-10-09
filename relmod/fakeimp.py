@@ -1,4 +1,5 @@
 import os
+import warnings
 
 from . import utils
 from . import proxy
@@ -11,12 +12,19 @@ def count_dots(p):
     return (x0-x1), p
 
 
+def _deprecate_warn():
+    warnings.warn(
+        'fimport/ffrom has been deprecated and will be '
+        'removed in a later version. Use relmod.imp instead.')
+
+
 class FakeImport:
 
     def __init__(self, globalsdict):
         self._g = globalsdict
 
     def __call__(self, path, as_=None):
+        _deprecate_warn()
         return self._fimport(self._g, path, as_)
 
     def _fimport(self, g, path, as_):
@@ -119,4 +127,6 @@ class FakeImport:
 class FakeFrom(FakeImport):
 
     def __call__(self, path, import_, as_=None):
+        _deprecate_warn()
+
         return self._ffrom(self._g, path, import_, as_)

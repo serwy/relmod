@@ -4,8 +4,8 @@ import sys
 """
 AutoImport
 
-Attributes are top-level module names,
-lazy import on demand.
+Attributes are top-level module names, lazy import-on-demand.
+
 
 """
 

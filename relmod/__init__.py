@@ -18,25 +18,48 @@ __all__ = ['at', 'up', 'install', 'reload', 'toplevel',
            'auto', 'runtest', 'testonly', 'testmod',
            'site', 'execfile', 'imp']
 
-def at(fp, inside='__file__'):
-    mod = _default.at(fp, inside)
+def at(pathname, inside='__file__'):
+    """Create a module reference to the `pathname` string.
+
+        Relative paths are normalized to `os.getcwd()`.
+    """
+    mod = _default.at(pathname, inside)
     return mod
 
 def up(__file__):
+    """Create a namespace module reference to the parent directory
+        of the provided path, e.g. `__file__`.
+
+        Relative paths are normalized to `os.getcwd()`.
+    """
     mod = _default.up(__file__)
     return mod
 
-def install(globalsdict):
-    g = globalsdict
+def install(globals=None):
+    """Install relmod import machinery into the provided namespace.
+    If `globals is None`, uses the caller frame's globals.
+    """
+    if globals is None:
+        frame = sys._getframe()
+        globals = frame.f_back.f_globals
+
+    g = globals
     mod = _default.install(g)
     if g['__name__'] == '__main__':
         __builtins__['__import__'] = _default.builtins.__import__
     return mod
 
 def reload(filename):
+    """Reload a provided filename or module reference."""
     return _default.reload(filename)
 
 def toplevel(toplevel, filename):
+    """Register a toplevel name for import.
+
+        relmod.toplevel('mymodule', '/path/to/file.py')
+        import mymodule
+
+    """
     if isinstance(filename, fmods.FakeModuleType):
         filename = filename.__fullpath__
     _default.finder.register(toplevel, filename, proxy=True)
@@ -45,36 +68,86 @@ auto = autoimport.AutoImport()
 site = fakesite.create_default_site(_default)
 
 
-def imp(modname, what, globals=None):
-    """import names from module into provided namespace"""
+
+def imp(modname, fromlist=None, globals=None):
+    """Import names from a module into a provided namespace.
+
+        If `modname` is a relative path string, it is normalized relative
+        to `__file__` from the global namespace, not os.getcwd().
+
+        Supports renaming imports using ` as `.
+
+        relmod.imp('. as local')  # import local directory namespace as `local`
+        relmod.imp('../file.py', 'funcA, func2 as funcB')
+    """
     if globals is None:
         frame = sys._getframe()
         globals = frame.f_back.f_globals
 
+
+    update_dict = {}
     if isinstance(modname, str):
-        mod = at(modname)
+        if fromlist:
+            insert_module = False
+        else:
+            insert_module = True
+
+        if ' as ' in modname:
+            modname, rename = modname.split(' as ')
+            modname = modname.strip()
+            rename = rename.strip()
+            insert_module = True
+        else:
+            rename = None
+
+        _file = globals.get('__file__', None)
+        if _file is None:
+            # rely on os.getcwd()
+            mod = at(modname)
+        else:
+            head, tail = os.path.split(_file)
+            modname = os.path.join(head, modname)
+            mod = at(modname)
+
+        if insert_module:
+            if rename is None:
+                # use the filename as the key in globals
+                head, tail = os.path.split(modname)
+                rename, ext = os.path.splitext(tail)
+
+            rename = utils.fs_name_to_attr(rename)
+            if rename:
+                update_dict[rename] = mod
+            else:
+                raise ImportError(modname)
+
     else:
         mod = modname
 
-    names = [i.strip() for i in what.split(',')]
+    if fromlist:
+        names = [i.strip() for i in fromlist.split(',')]
 
-    if '*' in names:
-        _all = getattr(mod, '__all__', None)
-        if _all is None:
-            _all = [i for i in dir(mod) if not i.startswith('_')]
-        names.extend(_all)
-        while '*' in names:
-            names.remove('*')
+        if '*' in names:
+            _all = getattr(mod, '__all__', None)
+            if _all is None:
+                _all = [i for i in dir(mod) if not i.startswith('_')]
+            names.extend(_all)
+            while '*' in names:
+                names.remove('*')
 
-    for n in names:
-        if ':' in n:
-            src, dst = n.split(':')
-        elif ' as ' in n:
-            src, dst = n.split(' as ')
-        else:
-            src = dst = n
+        for n in names:
+            if ':' in n:
+                src, dst = n.split(':')
+            elif ' as ' in n:
+                src, dst = n.split(' as ')
+            else:
+                src = dst = n
 
-        globals[dst.strip()] = getattr(mod, src.strip())
+            update_dict[dst.strip()] = getattr(mod, src.strip())
+
+    # Do the update atomically, so that we don't have a partial
+    # update to globals in case there was an error earlier.
+    globals.update(update_dict)
 
 
 def deps(dirs=True, files=True):

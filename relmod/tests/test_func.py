@@ -15,7 +15,9 @@ from relmod import fakesite
 class TestFunc(unittest.TestCase):
 
     def setUp(self):
+        self._prior_cwd = os.getcwd()
         self.base = tempfile.mkdtemp()
+        os.chdir(self.base)
         self.kf = tkfs.TinyKeyFS(self.base)
         self.reg = relmod.registry.FakeModuleRegistry()
         self.lib = self.reg._load_file(self.base)
@@ -25,6 +27,7 @@ class TestFunc(unittest.TestCase):
         relmod._default = self.reg
 
     def tearDown(self):
+        os.chdir(self._prior_cwd)
         shutil.rmtree(self.base)
         self.reg.finder._remove_meta_path()
         self.reg.finder._remove_sys_modules()
@@ -69,7 +72,8 @@ class TestFunc(unittest.TestCase):
         self.assertTrue('y' in mdir)
         self.assertTrue('other' in mdir)
 
-    def test_fakeimp_star(self):
+
+    def test_imp_star(self):
         files = {'main/__init__.py': '',
                   'main/x.py':'X=1; Y=2; Z=3 ',
                   'main/y.py':'X=4; Y=5; Z=6 ',
@@ -82,12 +86,13 @@ class TestFunc(unittest.TestCase):
         lib = self.lib
 
         mod = lib.main.a
-        mod.ffrom('.x', '*')
+        relmod.imp(lib.main.x, '*', mod.__dict__)
+
         self.assertEqual(mod.X, 1)
         self.assertEqual(mod.Y, 2)
         self.assertEqual(mod.Z, 3)
 
-        mod.fimport('.y', '*')
+        relmod.imp(lib.main.y, '*', mod.__dict__)
         self.assertEqual(mod.X, 4)
         self.assertEqual(mod.Y, 5)
         self.assertEqual(mod.Z, 6)
@@ -120,9 +125,6 @@ class TestFunc(unittest.TestCase):
              '__file__':self.kf.path('main/__init__.py')}
 
         local = relmod.install(g)
-        self.assertTrue('fimport' in g)
-        self.assertTrue('ffrom' in g)
-
 
         relmod.toplevel('fm_main_x', lib.x.__file__)
         try:
@@ -131,16 +133,16 @@ class TestFunc(unittest.TestCase):
         finally:
             sys.modules.pop('fm_main_x')
 
-    def test_deep_fimport(self):
+    def test_imp(self):
         files = {'main/sub/sub/a.py': '''if 1:
     import relmod; local = relmod.install(globals())
-    fimport('../x.py')
-    fimport('../../y.py')
+    relmod.imp('../x.py', 'X')
+    relmod.imp('../../y.py', 'Y')
     ''',
                  'main/sub/sub/b.py': '''if 1:
     import relmod; local = relmod.install(globals())
-    fimport('..x')
-    fimport('...y')
+    relmod.imp('../x.py as x')
+    relmod.imp('../../y.py as y')
     ''',
                  'main/sub/x.py': 'X=1',
                  'main/y.py': 'Y=2',
@@ -148,11 +150,12 @@ class TestFunc(unittest.TestCase):
         self.kf.update(files)
         lib = self.lib
 
-        self.assertEqual(lib.main.sub.sub.a.x.X, 1)
-        self.assertEqual(lib.main.sub.sub.a.y.Y, 2)
+        self.assertEqual(lib.main.sub.sub.a.X, 1)
+        self.assertEqual(lib.main.sub.sub.a.Y, 2)
 
         self.assertEqual(lib.main.sub.sub.b.x.X, 1)
         self.assertEqual(lib.main.sub.sub.b.y.Y, 2)
+
 
     def test_import_reload(self):
         # test fimport provides ModuleProxy
@@ -160,7 +163,7 @@ class TestFunc(unittest.TestCase):
         files = {
             'x.py': '''if 1:
     import relmod; local = relmod.install(globals())
-    fimport('./y.py')
+    relmod.imp('./y.py')
     from . import y as _y
     from .y import *
     ''',

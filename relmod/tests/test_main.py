@@ -112,51 +112,25 @@ class TestFakemod(unittest.TestCase):
         a.__stale__ = stale
         self.reg.reload(a.__file__)
 
-    def test_fakeimp(self):
-        files = {'main/__init__.py': '',
-                  'main/x.py':'X=1',
-                  'main/a.py':'''if 1:
-                    import relmod
-                    local=relmod.install(globals())
-                    ''',
-                  }
-        self.kf.update(files)
-        self.kf['main/sub/sub/a.py'] = self.kf['main/a.py']
-        lib = self.lib
-
-        mod = lib.main.a
-
-        self.assertFalse(hasattr(mod, 'x'))
-        mod.fimport('.x')
-        self.assertTrue(hasattr(mod, 'x'))
-
-        mod.ffrom('.x', 'X', 'Y')
-        self.assertEqual(mod.Y, 1)
-
-        mod = lib.main.sub.sub.a
-        self.assertFalse(hasattr(mod, 'x'))
-        mod.fimport('...x', as_='y')
-        self.assertTrue(hasattr(mod, 'y'))
-
-        mod.ffrom('...x', 'X', 'Y')
-        self.assertEqual(mod.Y, 1)
-
     def test_spaces(self):
         files = {'main/__init__.py': """if 1:
                 import relmod; relmod.install(globals())
                 """,
                   'main/x x.py':'X=1',
+                  'main/regular.py': '',
                   }
         self.kf.update(files)
         mod = self.lib.main
-        mod.fimport('./x x.py', 'x')
-        self.assertEqual(mod.x.X, 1)
+        mod.relmod.imp('./x x.py as xpx', globals=mod.__dict__)
+        self.assertEqual(mod.xpx.X, 1)
 
         with self.assertRaises(ImportError):
-            mod.fimport('./x x.py')
+            mod.relmod.imp('./x x.py', globals=mod.__dict__)
 
-        x = mod['x x']
-        self.assertEqual(x.X, 1)
+        xpx = mod['x x.py']  # use getitem interface to get
+        self.assertEqual(xpx.X, 1)
+
+        self.assertTrue('x x' not in dir(mod))
 
     def test_register(self):
         files = {'showcase/__init__.py':'',
