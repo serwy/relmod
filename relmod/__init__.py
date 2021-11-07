@@ -150,6 +150,26 @@ def imp(modname, fromlist=None, globals=None):
     globals.update(update_dict)
 
 
+def use(path, *, globals=None):
+    """Use the provided path. Relative paths resolve using `__file__` from
+        calling frame's global namespace.
+    """
+    if globals is None:
+        frame = sys._getframe()
+        globals = frame.f_back.f_globals
+
+    _file = globals.get('__file__', None)
+    if _file is None:
+        # rely on os.getcwd()
+        mod = at(path)
+    else:
+        head, tail = os.path.split(_file)
+        modname = os.path.join(head, path)
+        mod = at(modname)
+
+    return mod
+
+
 def deps(dirs=True, files=True):
     __deps(_default._deps, dirs, files)
 

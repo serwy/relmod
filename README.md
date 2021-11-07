@@ -54,7 +54,6 @@ Python library. Packaging is up to you.
 
 ## Examples
 
-
 Use the current working directory as a namespace module:
 
     lib = relmod.at('.')
@@ -70,6 +69,34 @@ Relative directories can be given:
 which is the same as
 
     parent = relmod.up('.')
+
+
+### Importing
+
+Import an object from a module into the global namespace:
+
+    relmod.imp('./myfunc.py', 'add')
+
+Rename references in the import using `as`
+
+    relmod.imp('./myfunc.py', 'add as add2')
+    print(add2(3, 4))
+
+Names can be comma-separated, e.g. `'add, sub, mult, div'`.
+
+
+Import a filename as another name:
+
+    relmod.imp('./myfunc.py as mfunc')
+    mfunc.add(1, 2)
+
+__Note:__ Non-module objects imported using `relmod.imp` are not automatically
+reloaded if changes occur to the file. You will need to reimport them.
+
+The prior importing functions `fimport` and `ffrom` have been
+deprecated and will be removed in a later version.
+
+
 
 
 ### Cell Mode
@@ -116,41 +143,10 @@ Only run a single class in a test file and exit:
         ...
 
 
-### Importing
-
-Import an object from a module into the global namespace:
-
-    relmod.imp('./myfunc.py', 'add')
-
-Rename references in the import using `as`
-
-    relmod.imp('./myfunc.py', 'add as add2')
-    print(add2(3, 4))
-
-Names can be comma-separated, e.g. `'add, sub, mult, div'`.
-
-
-Import a filename as another name:
-
-    relmod.imp('./myfunc.py as mfunc')
-    mfunc.add(1, 2)
-
-__Note:__ Non-module objects imported using `relmod.imp` are not automatically
-reloaded if changes occur to the file. You will need to reimport them.
-
-An important relative path resolution difference exists between `.imp` and `.at`.
-Using `relmod.imp` will make use of the `__file__` value from the global
-namespace to resolve a relative directory, whereas `relmod.at` uses the current
-working directory.
-
-The prior importing functions `fimport` and `ffrom` have been
-deprecated and will be removed in a later version.
-
-
 ## How it works
 
-The `.at`, `.up`, `.install`, `.imp` functions return `FakeModuleType` objects
-wrapped in a `ModuleProxy` object that triggers reloading when
+The `.use`, `.imp`, `.at`, `.up`, and `.install` functions return `FakeModuleType`
+objects wrapped in a `ModuleProxy` object that trigger reloading when
 accessing its attributes, if needed. Namespace and `__init__.py` fake
 modules perform auto-reloading on attribute access as well.
 
@@ -161,9 +157,20 @@ imports within a fake module perform dependency tracking,
 allowing for lazy deep-reloading of modules.
 
 The auto-reloading of a module's source __will not hot-patch__ existing
-objects like the `%autoreload%` magic from IPython. Hot-patching makes
+objects like the `%autoreload` magic from IPython. Hot-patching makes
 certain assumptions about your code, and if violated, will introduce
 subtle bugs.
+
+### Relative Path Resolution
+
+The `relmod.at` and `relmod.up` functions use `os.getcwd()` when resolving relative paths.
+
+The `relmod.use` and `relmod.imp` functions use `__file__` from the calling frame's
+globals dictionary, and uses `os.getcwd()` as a fallback if `__file__` is not defined.
+
+It is recommended to use `.use` and `.imp` in library scripts where relative paths must
+resolve relative to the script's file path rather than the current working directory.
+
 
 ## Install
 
