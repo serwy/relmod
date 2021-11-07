@@ -190,9 +190,10 @@ class FakeSite:
         _fakesites[self] = _FakeSiteConfig(registry)
 
     def __del__(self):
-        x = _fakesites.pop(self, None)
-        if x:
-            x._destroy()
+        if _fakesites:
+            x = _fakesites.pop(self, None)
+            if x:
+                x._destroy()
 
     def __getattr__(self, name):
         try:

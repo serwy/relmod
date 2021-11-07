@@ -156,6 +156,23 @@ class TestFunc(unittest.TestCase):
         self.assertEqual(lib.main.sub.sub.b.x.X, 1)
         self.assertEqual(lib.main.sub.sub.b.y.Y, 2)
 
+    def test_use(self):
+        files = {
+            'main/sub/sub/a.py': '''if 1:
+    import relmod
+    x = relmod.use('../x.py')
+    y = relmod.use('../../y.py')
+    ''',
+            'main/sub/x.py': 'X=1',
+            'main/y.py': 'Y=2',
+                 }
+
+        self.kf.update(files)
+        lib = self.lib
+
+        self.assertEqual(lib.main.sub.sub.a.x.X, 1)
+        self.assertEqual(lib.main.sub.sub.a.y.Y, 2)
+
 
     def test_import_reload(self):
         # test fimport provides ModuleProxy
