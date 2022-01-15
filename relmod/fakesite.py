@@ -6,28 +6,10 @@ from collections import defaultdict
 from .cache import FileStat
 
 
-def _dep_warn(filename):
-    head, tail = os.path.split(filename)
-
-    rename = None
-    for pre in ('', '.'):
-        if tail.lower() == pre + 'fakemod.site':
-            rename = os.path.join(head, pre +'relmod.site')
-
-    if rename is not None:
-        import warnings
-        warnings.warn(
-            ('"fakemod.site" deprecated.\n' +
-            ('    rename %r\n' % filename) +
-            ('    to:    %r' % rename)),
-            FutureWarning
-        )
-
 
 def load_site(filename):
 
     if os.path.isfile(filename):
-        _dep_warn(filename)
         with open(filename, 'r') as fid:
             try:
                 d = json.load(fid)
@@ -110,7 +92,7 @@ class _FakeSiteConfig:
 
         _site_files = []
 
-        # specifying `break` in the environment variable FAKEMOD_SITE
+        # specifying `break` in the environment variable RELMOD_SITE
         # ignores using the default files
         for file in envlist.split(';'):
             file = file.strip()
@@ -230,25 +212,15 @@ class FakeSite:
 
 _site_files_default = [
     './relmod.site',
-    './fakemod.site',
     '~/.relmod.site',
-    '~/.fakemod.site',
     '~/.config/relmod.site',
-    '~/.config/fakemod.site',
     ]
 
 
 def create_default_site(registry):
     site = FakeSite(registry)
 
-    fsite = os.environ.get('FAKEMOD_SITE', '')
-    if fsite:
-        import warning
-        warning.warn(
-            'FAKEMOD_SITE environment variable deprecated.\n'
-            'Use RELMOD_SITE instead.')
-
-    rsite = os.environ.get('RELMOD_SITE', fsite)
+    rsite = os.environ.get('RELMOD_SITE', '')
     (~site).set_site_files(
         rsite,
         _site_files_default)
