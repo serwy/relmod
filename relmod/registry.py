@@ -1,3 +1,10 @@
+##
+## Author:    Roger D. Serwy
+## Copyright: 2020-2022, Roger D. Serwy
+##            All rights reserved.
+## License:   BSD 2-Clause, see LICENSE file from project
+##
+
 from __future__ import print_function
 import sys
 

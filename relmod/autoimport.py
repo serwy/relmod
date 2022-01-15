@@ -1,14 +1,21 @@
-import importlib
-import sys
-
 """
 AutoImport
 
 Attributes are top-level module names, lazy import-on-demand.
 
-
 """
 
+##
+## Author:    Roger D. Serwy
+## Copyright: 2020-2022, Roger D. Serwy
+##            All rights reserved.
+## License:   BSD 2-Clause, see LICENSE file from project
+##
+
+import importlib
+import sys
+
+__all__ = ['AutoImport']
 
 class AutoImport:
     def __init__(self):

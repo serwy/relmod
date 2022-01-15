@@ -1,5 +1,11 @@
-import os
+##
+## Author:    Roger D. Serwy
+## Copyright: 2020-2022, Roger D. Serwy
+##            All rights reserved.
+## License:   BSD 2-Clause, see LICENSE file from project
+##
 
+import os
 
 class TinyKeyFS:
     def __init__(self, base):
