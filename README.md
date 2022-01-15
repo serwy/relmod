@@ -137,6 +137,10 @@ Only run a single class in a test file and exit:
     class Test(unittest.TestCase):
         ...
 
+        @relmod.testfocus  # focus on this test
+        def test_thing(self):
+            ...
+
 
 ## How it works
 

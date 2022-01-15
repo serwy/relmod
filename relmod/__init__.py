@@ -5,7 +5,7 @@ from . import proxy
 from . import registry
 from . import autoimport
 
-from .runner import runtest, testonly, testmod
+from .runner import runtest, testmod, testfocus, testonly
 from .proxy import wrap, unwrap
 from ._version import __version__
 from . import fakesite
