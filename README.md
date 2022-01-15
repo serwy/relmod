@@ -10,23 +10,23 @@ Running the following:
 
     import relmod
 
-    # create a file with a function
-    with open('./myfunc.py', 'w') as f:
+    with open('./myfunc.py', 'w') as f:    # create a file with a function
         f.write("""
     def add(x, y):
         return x + y
     """)
 
-    myfunc = relmod.at('./myfunc.py')  # load as a module
+    myfunc = relmod.at('./myfunc.py')      # load file as a module
 
-    print(myfunc.add(3, 4))  # call the function
+    print(myfunc.add(3, 4))                # call the function
 
     import unittest
-    class TestMyFunc(unittest.TestCase):
+    class TestMyFunc(unittest.TestCase):   # create a test
         def test_add(self):
-            self.assertEqual(myfunc.add(3, 4), 7)  # create a test
+            self.assertEqual(
+                myfunc.add(3, 4), 7)
 
-    relmod.runtest(TestMyFunc)  # run the test
+    relmod.runtest(TestMyFunc)             # run the test
 
 produces this output:
 
@@ -65,10 +65,6 @@ Entering folders that are not valid Python identifiers is supported:
 Relative directories can be given:
 
     parent = lib['../']  # go up a directory, using []
-
-which is the same as
-
-    parent = relmod.up('.')
 
 
 ### Importing
@@ -137,14 +133,14 @@ Only run a single class in a test file and exit:
     class Test(unittest.TestCase):
         ...
 
-        @relmod.testfocus  # focus on this test
+        @relmod.testfocus  # optionally focus only on this test
         def test_thing(self):
             ...
 
 
 ## How it works
 
-The `.use`, `.imp`, `.at`, `.up`, and `.install` functions return `FakeModuleType`
+The `.imp`, `.at`, `.up`, `.use`, and `.install` functions return `FakeModuleType`
 objects wrapped in a `ModuleProxy` object that trigger reloading when
 accessing its attributes, if needed. Namespace and `__init__.py` fake
 modules perform auto-reloading on attribute access as well.
@@ -162,13 +158,36 @@ subtle bugs.
 
 ### Relative Path Resolution
 
-The `relmod.at` and `relmod.up` functions use `os.getcwd()` when resolving relative paths.
+The `relmod.at` and `relmod.up` functions use `os.getcwd()` when resolving
+relative paths.
 
-The `relmod.use` and `relmod.imp` functions use `__file__` from the calling frame's
-globals dictionary, and uses `os.getcwd()` as a fallback if `__file__` is not defined.
+The `relmod.use` and `relmod.imp` functions use `__file__` from the calling
+frame's globals dictionary, and uses `os.getcwd()` as a fallback if `__file__`
+is not defined.
 
-It is recommended to use `.use` and `.imp` in library scripts where relative paths must
-resolve relative to the script's file path rather than the current working directory.
+It is recommended to use `.use` and `.imp` in library scripts where relative
+paths must resolve relative to the script's file path rather than the current
+working directory.
+
+Here is a comparison of different ways to resolve the path `"."`:
+
+    lib = relmod.at('.')     # resolved using os.getcwd()
+
+    lib = relmod.use('.')    # resolved using __file__
+
+    relmod.imp('. as lib')   # resolved using __file__,
+                             # injects `lib` into caller's global namespace
+
+
+## Other Utilities
+
+There are other utilities in `relmod` that are useful for quick development.
+
+API | Description
+:-- | :--
+`relmod.execfile()`  | Executes a file's contents in a provided namespace
+`relmod.auto`        | Auto-imports toplevel modules on attribute access
+`relmod.site`        | Predefined site module names, see `fakesite.py`
 
 
 ## Install
