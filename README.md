@@ -3,7 +3,7 @@
 Place your Python code in a directory and start using it immediately.
 
 * Import file names as auto-deep-reloading modules.
-* Import directories as auto-loading namespaces.
+* Import directories as auto-reloading namespaces.
 * Run `unittest` cases easily.
 
 Running the following:
@@ -92,11 +92,6 @@ Import a filename as another name:
 
 __Note:__ Non-module objects imported using `relmod.imp` are not automatically
 reloaded if changes occur to the file. You will need to reimport them.
-
-The prior importing functions `fimport` and `ffrom` have been
-deprecated and will be removed in a later version.
-
-
 
 
 ### Cell Mode

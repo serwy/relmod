@@ -175,7 +175,6 @@ class TestFunc(unittest.TestCase):
 
 
     def test_import_reload(self):
-        # test fimport provides ModuleProxy
         # assumes SmartCache
         files = {
             'x.py': '''if 1:
@@ -214,7 +213,6 @@ class TestFunc(unittest.TestCase):
 
 
     def test_import_proxy(self):  # for later
-        # test fimport provides ModuleProxy
         # assumes SmartCache
         BASE = self.base
         files = {
