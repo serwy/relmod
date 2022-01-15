@@ -46,6 +46,13 @@ class FakeLoader:
         self.fs.finder._sysmods[fullname] = wmod
         return mod
 
+    # python 3.10
+    def create_module(self, spec):
+        return proxy.wrap(self.load_module())
+
+    def exec_module(self, mod):
+        pass
+
 
 class FakeSpec:
     def __init__(self, finder, fullname, fullpath, use_proxy):
@@ -74,6 +81,7 @@ class FakeFinder:
         sys.meta_path.insert(0, self)
         self.toplevel = {}
         self._sysmods = {}  # cache of what was added
+        self.__attr_print = set()
 
     def _remove_meta_path(self):
         if self in sys.meta_path:
@@ -87,8 +95,11 @@ class FakeFinder:
         self._sysmods.clear()
 
     def __getattr__(self, name):
-        if name not in ('find_spec',):
-            print('ff getattr', name)
+        if name not in ('find_spec', '__qualname__'):
+            if name not in self.__attr_print:
+                print('ff getattr', name)
+                self.__attr_print.add(name)
+
         raise AttributeError(name)
 
     def invalidate_caches(self, *args):
@@ -113,6 +124,9 @@ class FakeFinder:
         if spec is None:
             return
         return spec.loader
+
+
+    find_spec = _find_spec  # python 3.10
 
     def load_module(self, fullname):
         print('load module', fullname)
