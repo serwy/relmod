@@ -371,3 +371,74 @@ class FakeModuleRegistry:
             mod = proxy.wrap(s, inside)
 
         return mod
+
+    def imp(self, modname, fromlist=None, globals=None):
+        if globals is None:
+            raise TypeError('globals must be provided')
+
+        update_dict = {}
+        if isinstance(modname, str):
+            if fromlist:
+                insert_module = False
+            else:
+                insert_module = True
+
+            if ' as ' in modname:
+                modname, rename = modname.split(' as ')
+                modname = modname.strip()
+                rename = rename.strip()
+                if rename == '-':
+                    rename = None
+                insert_module = True
+            else:
+                rename = None
+
+            _file = globals.get('__file__', None)
+            if _file is None:
+                # rely on os.getcwd()
+                mod = self.at(modname)
+            else:
+                head, tail = os.path.split(_file)
+                modname = os.path.expanduser(modname)
+                modname = os.path.join(head, modname)
+                mod = self.at(modname)
+
+            if insert_module:
+                if rename is None:
+                    # use the filename as the key in globals
+                    head, tail = os.path.split(modname)
+                    rename, ext = os.path.splitext(tail)
+
+                rename = utils.fs_name_to_attr(rename)
+                if rename:
+                    update_dict[rename] = mod
+                else:
+                    raise ImportError(modname)
+
+        else:
+            mod = modname
+
+        if fromlist:
+            names = [i.strip() for i in fromlist.split(',')]
+
+            if '*' in names:
+                _all = getattr(mod, '__all__', None)
+                if _all is None:
+                    _all = [i for i in dir(mod) if not i.startswith('_')]
+                names.extend(_all)
+                while '*' in names:
+                    names.remove('*')
+
+            for n in names:
+                if ':' in n:
+                    src, dst = n.split(':')
+                elif ' as ' in n:
+                    src, dst = n.split(' as ')
+                else:
+                    src = dst = n
+
+                update_dict[dst.strip()] = getattr(mod, src.strip())
+
+        # Do the update atomically, so that we don't have a partial
+        # update to globals in case there was an error earlier.
+        globals.update(update_dict)
