@@ -18,12 +18,14 @@ import sys
 from . import proxy
 from . import registry
 from . import autoimport
+from . import utils
 
 from .runner import runtest, testmod, testfocus, testonly
 from .proxy import wrap, unwrap
 from ._version import __version__
 from . import fakesite
 from .utils import execfile
+
 
 
 _default = registry.FakeModuleRegistry()
@@ -98,6 +100,21 @@ def imp(modname, fromlist=None, globals=None):
         globals = frame.f_back.f_globals
 
     return _default.imp(modname, fromlist, globals)
+
+
+def _imp_site(name, fromlist=None, globals=None):
+    """Import using `relmod.site`"""
+    if globals is None:
+        globals = utils.get_globals(1)
+
+    if fromlist is None:
+        return imp(site, name, globals)
+    else:
+        obj = getattr(site, name)
+        return imp(obj, fromlist, globals)
+
+imp.site = _imp_site
+
 
 
 def use(path, *, globals=None):

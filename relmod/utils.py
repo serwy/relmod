@@ -7,6 +7,7 @@
 
 import os
 import datetime
+import sys
 
 
 def now():
@@ -87,3 +88,11 @@ def execfile(filename, globals=None, locals=None,
                    dont_inherit=dont_inherit)
 
     exec(code, globals, locals)
+
+
+def get_globals(depth):
+    """ Return globals from the caller, depth=0 is caller frame."""
+    frame = sys._getframe()
+    for d in range(depth+1):
+        frame = frame.f_back
+    return frame.f_globals

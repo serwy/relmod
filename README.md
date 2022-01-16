@@ -188,7 +188,7 @@ API | Description
 `relmod.execfile()`  | Executes a file's contents in a provided namespace
 `relmod.auto`        | Auto-imports toplevel modules on attribute access
 `relmod.site`        | Predefined site module names, see `fakesite.py`
-
+`relmod.imp.site`    | Import from `relmod.site`
 
 ## Install
 
