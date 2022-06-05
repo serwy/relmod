@@ -34,16 +34,15 @@ def _runtest(tc, test_names='', verbosity=2, **kw):
         def sprint(*args):
             print(*args, file=stream)
 
-        sprint('-' * 70)
-        sprint(' Note: @relmod.testfocus present on: ')
+        if True:  # to make aligning the output easier
+            sprint('-' * 70)
+            sprint('  Note: @relmod.testfocus present on: ')
         for func in testfunc:
-            sprint('    line % 4i - %r' % (func.__code__.co_firstlineno, func))
-        sprint('', func)
-        sprint()
+            sprint('        line %i: %r' % (func.__code__.co_firstlineno, func))
         if test_names:
-            sprint('Ignoring provided test_names=%r' % (test_names, ))
+            sprint()
+            sprint('  Ignoring provided test_names=%r' % (test_names, ))
         sprint('-' * 70)
-
 
     if testonly:
         test_names = ','.join(testonly)
@@ -104,8 +103,15 @@ def testonly(test_names='', **kw):
 def testmod(mod, **kw):
     """Find all TestCase classes and send to `runtest`"""
     todo = []
-    d = mod.__dict__
-    for k in sorted(mod.__dict__.keys()):
+
+    if isinstance(mod, types.ModuleType):
+        d = mod.__dict__
+    elif isinstance(mod, dict):
+        d = mod
+    else:
+        raise TypeError('Expecting ModuleType or dict, not %r' % type(mod))
+
+    for k in sorted(d.keys()):
         v = d[k]
         if isinstance(v, type):
             if issubclass(v, unittest.TestCase):

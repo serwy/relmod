@@ -31,7 +31,7 @@ from .utils import execfile
 _default = registry.FakeModuleRegistry()
 
 __all__ = ['at', 'up', 'install', 'reload', 'toplevel',
-           'auto', 'runtest', 'testonly', 'testmod',
+           'auto', 'runtest', 'testonly', 'testmod', 'testfocus',
            'site', 'execfile', 'imp']
 
 def at(pathname, inside='__file__'):
@@ -65,6 +65,20 @@ def install(globals=None):
         __builtins__['__import__'] = _default.builtins.__import__
     return mod
 
+
+def if_main(globals=None):
+    """Install relmod only if run in __main__"""
+    # use case: relative imports and testing in same file
+    if globals is None:
+        frame = sys._getframe()
+        globals = frame.f_back.f_globals
+
+    g = globals
+    if g['__name__'] == '__main__':
+        __builtins__['__import__'] = _default.builtins.__import__
+        mod = _default.install(g)
+        return mod
+
 def reload(filename):
     """Reload a provided filename or module reference."""
     return _default.reload(filename)
@@ -80,11 +94,16 @@ def toplevel(toplevel, filename):
         filename = filename.__fullpath__
     _default.finder.register(toplevel, filename, proxy=True)
 
+def _toplevel_site(name):
+    toplevel(name, getattr(site, name))
+
+toplevel.site = _toplevel_site
+
 auto = autoimport.AutoImport()
 site = fakesite.create_default_site(_default)
 
 
-def imp(modname, fromlist=None, globals=None):
+def imp(modname, fromlist=None, globals=None, abswarn=True):
     """Import names from a module into a provided namespace.
 
         If `modname` is a relative path string, it is normalized relative
@@ -98,6 +117,24 @@ def imp(modname, fromlist=None, globals=None):
     if globals is None:
         frame = sys._getframe()
         globals = frame.f_back.f_globals
+
+    if isinstance(modname, str):
+        _file = globals.get('__file__', None)
+        if _file is not None:
+            if (abswarn) and (not modname.startswith('.')):
+                head, tail = os.path.split(_file)
+                m = os.path.expanduser(modname)
+                m = os.path.join(head, m)
+
+                import warnings
+                # do a warning for relative path
+                rp = os.path.relpath(m, head)
+                if not rp.startswith('.'):
+                    rp = '.' + os.sep + rp
+
+                s = '%r -> %r' % (modname, rp)
+                warnings.warn(fmods.AbsolutePathWarning(s), 'once',
+                              stacklevel=2)
 
     return _default.imp(modname, fromlist, globals)
 
@@ -113,7 +150,31 @@ def _imp_site(name, fromlist=None, globals=None):
         obj = getattr(site, name)
         return imp(obj, fromlist, globals)
 
+
+def _imp_develop(name, globals=None):
+    """Import a toplevel name for development"""
+    import importlib
+    mod = importlib.import_module(name)
+    file = mod.__file__
+    head, tail = os.path.split(file)
+    if tail == '__init__.py':
+        target = head
+    else:
+        target = file
+
+    if globals is None:
+        f = sys._getframe()
+        g = f.f_back.f_globals
+    else:
+        g = globals
+
+    imp(target, globals=g)
+    if name not in sys.modules:
+        sys.modules[name] = g[name]
+
+
 imp.site = _imp_site
+imp.develop = _imp_develop
 
 
 

@@ -33,7 +33,7 @@ def _by_mod(mod, inside):
     return ModuleProxy(reg, fp, inside)
 
 
-class ModuleProxy:
+class ModuleProxy(fmods.FakeModuleType):
     # allows for lazy loading
     # proxy to a particular file
 
@@ -107,6 +107,9 @@ class ModuleProxy:
         return "<moduleproxy %r%s>" % (fp, missing)
 
     def __del__(self):
+        if _mp_fakedict is None:
+            # avoid system shutdown traceback
+            return
         del _mp_fakedict[id(self)]
 
 

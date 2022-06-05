@@ -13,6 +13,7 @@ import weakref
 import types
 from collections import defaultdict
 import threading
+import warnings
 
 from . import cache
 from . import fmods
@@ -378,6 +379,8 @@ class FakeModuleRegistry:
     def imp(self, modname, fromlist=None, globals=None):
         if globals is None:
             raise TypeError('globals must be provided')
+
+        orig_modname = modname
 
         update_dict = {}
         if isinstance(modname, str):

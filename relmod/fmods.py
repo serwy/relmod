@@ -81,3 +81,7 @@ class FakeModuleType(types.ModuleType):
             return mdir()
 
         return sorted(d.keys())
+
+
+class AbsolutePathWarning(Warning):
+    pass
